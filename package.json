@@ -1,0 +1,26 @@
+{
+  "name": "onchain-app-interfaces",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "bun run format:check && bun run lint && bun run typecheck && bun test",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint .",
+    "test:e2e": "bun test test/e2e",
+    "test:fork:aerodrome": "forge test --match-contract AerodromeApplicationAdapterTest --fork-url https://evm.stupidtech.net/v1/8453",
+    "test:fork:moonwell": "forge test --match-contract MoonwellApplicationAdapterTest --fork-url https://evm.stupidtech.net/v1/8453",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "viem": "^2.37.3",
+    "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "oxfmt": "^0.12.0",
+    "oxlint": "^1.13.0",
+    "typescript": "^5.9.2"
+  }
+}
