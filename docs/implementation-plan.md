@@ -21,9 +21,9 @@ Completed:
 - Solidity fixtures and unit tests for the initial continuation flow.
 - deployed Anvil-to-HTTPS-to-callback tests for both `query()` and `prepare()`;
 - a combined query/action fixture covering onchain, authenticated, multi-stage, status, redirect, and form paths.
-- a real fully onchain Aerodrome adapter with pool, LP-position, and quote queries plus direct swap preparation;
+- a real fully onchain Aerodrome adapter with canonical direct-pool, LP-position, and quote queries plus direct swap preparation;
 - a Base fork observe, prepare, execute, and observe-again test using the returned call bundle unchanged.
-- a hybrid Moonwell adapter with external cross-market queries, onchain USDC position aggregation, and account-aware supply preparation.
+- a hybrid Moonwell adapter with external cross-market queries, onchain listed-market position aggregation, and account-aware ERC-20 supply preparation.
 - KyberSwap recursive quote/build, OpenSea authenticated query/mint, and Bitrefill authenticated query-only adapters.
 - an Avantis positions/open-trade adapter with strict validation of tx-builder calldata.
 - consolidated cross-application findings and proposed solutions in `docs/prototype-findings.md`.

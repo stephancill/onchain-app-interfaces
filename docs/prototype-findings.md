@@ -8,8 +8,8 @@ This document consolidates implementation evidence from the External Request cli
 
 | Adapter | Queries | Actions | External data | Client secret | Recursive | Executed on fork |
 | --- | --- | --- | --- | --- | --- | --- |
-| Aerodrome | Pool, LP position, quote | Direct swap | No | No | No | Yes |
-| Moonwell | Positions, health, USDC position | Supply USDC | Public API | No | No | Yes |
+| Aerodrome | Pool lookup, state, LP position, quote | Direct swap | No | No | No | Yes |
+| Moonwell | Market lookup, positions, health, listed-market position | Supply ERC-20 market | Public API | No | No | Yes |
 | KyberSwap | None | Exact-input swap | Public API | No | Yes | Local calls validated |
 | OpenSea | Collection stats | Public mint | Authenticated API | `x-api-key` | No | Onchain drop state mocked |
 | Bitrefill | Catalog search and detail | None | Authenticated API | `X-Access-Token` | No | Not applicable |

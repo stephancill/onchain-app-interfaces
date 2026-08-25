@@ -1,0 +1,164 @@
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  overflow-y: auto;
+}
+
+body,
+#root {
+  min-height: 100%;
+}
+
+main {
+  display: grid;
+  width: min(960px, calc(100% - 32px));
+  margin-inline: auto;
+  padding-block: 24px max(64px, env(safe-area-inset-bottom));
+  gap: 16px;
+}
+
+header,
+.about nav,
+.wallet,
+.capability-heading,
+.metadata,
+.summary {
+  display: flex;
+  gap: 16px;
+}
+
+.about {
+  border-block: 1px solid;
+  padding-block: 16px;
+}
+
+.about h2 {
+  margin-top: 0;
+}
+
+.about nav {
+  flex-wrap: wrap;
+}
+
+.metadata > div,
+.summary > div {
+  display: grid;
+  border: 1px solid;
+  padding: 8px;
+  gap: 4px;
+}
+
+.metadata {
+  flex-wrap: wrap;
+}
+
+.summary > div {
+  flex: 1;
+}
+
+.metadata dd {
+  margin: 0;
+}
+
+header,
+.capability-heading {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.wallet {
+  align-items: center;
+}
+
+.target-form,
+.policy-panel,
+.capabilities,
+.capability-card,
+label {
+  display: grid;
+  gap: 12px;
+}
+
+.target-form {
+  grid-template-columns: 100px 1fr 1.3fr auto;
+  align-items: end;
+}
+
+.policy-panel,
+.capabilities {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.capabilities {
+  align-items: start;
+}
+
+.policy-panel > div,
+.policy-panel .notice,
+.policy-panel .error {
+  grid-column: 1 / -1;
+}
+
+.capability-card,
+.result {
+  min-width: 0;
+}
+
+.capability-card {
+  align-content: start;
+  align-self: start;
+  border: 1px solid;
+  padding: 16px;
+}
+
+.examples {
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th,
+td {
+  border: 1px solid;
+  padding: 8px;
+  text-align: left;
+}
+
+input,
+textarea {
+  min-width: 0;
+  width: 100%;
+}
+
+p,
+code,
+dd {
+  overflow-wrap: anywhere;
+}
+
+pre {
+  max-width: 100%;
+  overflow: auto;
+}
+
+@media (max-width: 760px) {
+  header,
+  .metadata,
+  .target-form,
+  .policy-panel,
+  .capabilities {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .target-form button,
+  .policy-panel > * {
+    grid-column: 1;
+  }
+}

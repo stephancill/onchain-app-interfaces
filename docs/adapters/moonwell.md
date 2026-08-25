@@ -2,17 +2,23 @@
 
 ## Status
 
-Experimental hybrid reference adapter for Moonwell's current USDC market on Base.
+Experimental hybrid reference adapter for listed Moonwell ERC-20 markets on Base.
 
 The implementation is `contracts/adapters/MoonwellApplicationAdapter.sol`.
+
+## Deployment
+
+The generalized Base mainnet deployment is verified at [`0x805E521b5BD349B02380DC0C81bcd75bDb374FD2`](https://basescan.org/address/0x805E521b5BD349B02380DC0C81bcd75bDb374FD2). It was deployed with the canonical API origin in transaction [`0x5f4d02814aebe766e524cf3b84674faf8efd0e2b598ef35604e16ad7e38fa691`](https://basescan.org/tx/0x5f4d02814aebe766e524cf3b84674faf8efd0e2b598ef35604e16ad7e38fa691).
+
+The previous USDC-specific deployment remains available at `0xFe58AD745170163A133895fAE16ea9D3021Dd281` but does not expose the generalized capability IDs, market parameters, or market search.
 
 ## Purpose
 
 This adapter demonstrates one application interface combining:
 
 - public external semantic queries for cross-market positions and health;
-- a fully onchain semantic query for the current USDC market position;
-- account-aware preparation of a Moonwell USDC supply action.
+- a fully onchain semantic query for a selected listed market position;
+- account-aware preparation of an ERC-20 supply action for a selected listed market.
 
 Unlike a pass-through transaction API, the adapter constructs every action call from verified contract addresses and live onchain account state.
 
@@ -30,11 +36,19 @@ The configurable origin exists to support deterministic local continuation tests
 
 | Component | Address |
 | --- | --- |
-| USDC | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
-| Current mUSDC | `0xEdc817A28E8B93B03976FBd4a3dDBc9f7D176c22` |
 | Comptroller | `0xfBb21d0380beE3312B33c4353c8936a0F13EF26C` |
 
+The tests and web console use mUSDC at `0xEdc817A28E8B93B03976FBd4a3dDBc9f7D176c22` as one example. Position tests also cover mMORPHO. These addresses are examples rather than adapter restrictions.
+
 ## Queries
+
+### `moonwell.market`
+
+- Parameters: `abi.encode(address underlying)`
+- Data source: canonical Comptroller market registry and each listed market's `underlying()`
+- Result: `abi.encode(MoonwellMarketResult)`
+
+Returns the unique listed market contract for an underlying ERC-20. Missing and ambiguous matches revert rather than selecting an arbitrary market.
 
 ### `moonwell.positions`
 
@@ -50,28 +64,30 @@ The configurable origin exists to support deterministic local continuation tests
 
 `MoonwellExternalQueryResult` binds the raw JSON body to its query ID and account and includes HTTP status and observation time. The v0 descriptor does not yet provide a machine-readable JSON schema, so the body remains API-shaped rather than normalized into Solidity fields.
 
-### `moonwell.position.usdc`
+### `moonwell.position`
 
-- Parameters: `abi.encode(address account)`
-- Data source: current mUSDC account snapshot and Comptroller membership
-- Result: `abi.encode(MoonwellUsdcPosition)`
+- Parameters: `abi.encode(address account, address market)`
+- Data source: selected market account snapshot and Comptroller membership
+- Result: `abi.encode(MoonwellPosition)`
 
-The query computes supplied underlying USDC from mToken balance and exchange rate and returns current borrow balance and collateral status.
+The adapter requires the market to use the canonical Comptroller and to be currently listed. It resolves `underlying()` from that validated market, computes supplied underlying from mToken balance and exchange rate, and returns current borrow balance and collateral status.
 
 ## Action
 
-### `moonwell.supply.usdc`
+### `moonwell.supply`
 
 - Parameters: `abi.encode(MoonwellSupplyParameters)`
-- Fields: raw USDC `amount` and `enableAsCollateral`
+- Fields: `market`, raw underlying `amount`, and `enableAsCollateral`
 
-Preparation verifies the account's USDC balance and reads allowance and market-membership state. It conditionally returns:
+Preparation validates the market, derives its underlying token, verifies the account's underlying balance, and reads allowance and market-membership state. It conditionally returns:
 
-1. Exact USDC approval to mUSDC.
-2. Comptroller `enterMarkets([mUSDC])` when collateral is requested and not already enabled.
-3. mUSDC `mint(amount)`.
+1. Exact underlying-token approval to the selected market.
+2. Comptroller `enterMarkets([market])` when collateral is requested and not already enabled.
+3. Selected-market `mint(amount)`.
 
 There is no quote-based expiry, so `validUntil` is zero.
+
+Only listed markets exposing an ERC-20 `underlying()` are supported. A native market requiring payable minting would need a separate action shape rather than fallback behavior.
 
 ## Compound Return Codes
 
@@ -87,7 +103,7 @@ The client enforces HTTPS and origin policy before making an external request. T
 
 ## Validation
 
-Local integration tests deploy the adapter to Anvil and complete health and positions queries through a local HTTPS fixture. Base fork tests verify live position aggregation and execute the returned supply bundle unchanged while checking all Compound return codes and the resulting position.
+Local integration tests deploy the adapter to Anvil and complete health and positions queries through a local HTTPS fixture. Base fork tests resolve market addresses for multiple underlyings, verify live position aggregation across multiple listed markets, and execute a returned supply bundle unchanged while checking all Compound return codes and the resulting position.
 
 ```sh
 bun run test:fork:moonwell

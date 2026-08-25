@@ -19,8 +19,8 @@ Pre-number ERC working papers live in [`docs/eips/`](docs/eips/). They are forma
 
 Reference adapters live in `contracts/adapters/`:
 
-- a fully onchain [Aerodrome WETH/USDC adapter](docs/adapters/aerodrome.md);
-- a hybrid [Moonwell USDC adapter](docs/adapters/moonwell.md) combining external semantic queries with onchain action preparation.
+- a fully onchain [Aerodrome direct-pool adapter](docs/adapters/aerodrome.md);
+- a hybrid [Moonwell ERC-20 market adapter](docs/adapters/moonwell.md) combining external semantic queries with onchain action preparation.
 - a recursive [KyberSwap quote/build adapter](docs/adapters/kyberswap.md);
 - an authenticated [OpenSea stats/public-mint adapter](docs/adapters/opensea.md);
 - a query-only [Bitrefill catalog adapter](docs/adapters/bitrefill.md);
@@ -45,6 +45,16 @@ The end-to-end tests additionally require `anvil` and `openssl`. They compile an
 
 ```sh
 bun run test:e2e
+```
+
+## Web Console
+
+The descriptor-driven web console in `web/` discovers adapter queries and actions, executes semantic reads, prepares action call bundles, and can submit reviewed bundles through a connected wallet.
+
+```sh
+cd web
+bun install
+bun run dev
 ```
 
 ## Reference Client

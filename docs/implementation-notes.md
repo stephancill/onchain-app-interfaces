@@ -4,10 +4,25 @@ This document records implementation findings that affect the experimental inter
 
 ## 2026-08-25
 
+- Generalized the Aerodrome adapter from one embedded WETH/USDC pool to caller-selected canonical Base pools. Every query and action now validates factory membership, derives pool tokens and the stable flag onchain, and remains restricted to one direct route through the canonical router and factory.
+- Replaced Moonwell's USDC-specific onchain capabilities with `moonwell.position` and `moonwell.supply` for listed Base ERC-20 markets. The adapter validates the canonical Comptroller and listing, resolves the underlying token from the market, and never accepts user-provided protocol or underlying targets.
+- Renamed the web examples to Aerodrome and Moonwell and added usable WETH/USDC-pool and mUSDC defaults for the generalized descriptor fields. Existing verified deployment addresses still contain the earlier narrow adapters and require replacement deployments before the generalized capabilities are available on Base.
+- Verified 37 local Forge tests, 12 Aerodrome Base-fork tests, 10 Moonwell Base-fork tests, 30 Bun tests, Forge lint and formatting, root TypeScript formatting/lint/typechecking, and the web production build. Runtime sizes remain below EIP-170 at 17,056 bytes for Aerodrome and 18,940 bytes for Moonwell.
+- Deployed and verified the Avantis application adapter on Base at `0x53c8B42bf72C286e453D56F74831E9DFb975b0d6` with the canonical core API and transaction-builder origins, then added it to the web examples with both origins allowlisted and complete open-trade defaults.
+- Added `aerodrome.pool` and `moonwell.market` onchain search queries so generic clients can resolve canonical pool and listed-market contract addresses from token addresses before using state, position, quote, or action capabilities. Missing and ambiguous matches fail explicitly.
+- Deployed and verified the generalized Aerodrome adapter on Base at `0x31cB53007f5fDECEAa84d43ad4E387A081E13f7b` and the generalized Moonwell adapter at `0x805E521b5BD349B02380DC0C81bcd75bDb374FD2`, then replaced the legacy addresses in the web examples. Both runtimes match local artifacts; live search calls resolve the canonical WETH/USDC pool and mUSDC market.
 - Added two pre-number ERC working papers under `docs/eips/`: External HTTP Request Continuations and the combined Application Query and Action Interfaces proposal.
 - Followed the active EIP-1 and ERC repository structure, retained separate optional query and action ABIs in one application-interface proposal, and left descriptor serialization implementation-defined pending content-addressing and authenticity work.
 - Recorded the remaining pre-submission requirements: dedicated public discussion URLs, editor-assigned numbers, canonical repository validation, and ABI stabilization.
 - Scoped the root Bun test script to `test/` so ignored upstream guidance clones under `third-party/` are not mistaken for project test suites.
+- Deployed and verified the Moonwell application adapter on Base at `0xFe58AD745170163A133895fAE16ea9D3021Dd281` with the canonical `https://api.moonwell.fi` origin; runtime bytecode matches locally and the web client completed a live `moonwell.health` External Request continuation.
+- Added a web-console examples table for the verified Aerodrome and Moonwell adapters and moved non-sensitive adapter, RPC, activation, and origin state into nuqs URL parameters. External Request requirement values remain local and are never put in the URL.
+- Added prepared-action wallet execution through EIP-5792 `wallet_sendCalls`, with connected-wallet and account checks, chain switching, expiry validation, call-order preservation, wallet bundle status reporting, and mandatory atomic requests for descriptors marked `atomic-required`. Atomic-required actions never fall back to sequential transactions.
+- Deployed and verified the Aerodrome application adapter on Base at `0x6Be0EeB08795EE4fca64FC643Dfe2e77227EFD93` through txlink; its runtime bytecode matches the local artifact and live discovery returns the expected three queries and one action.
+- Seeded the web console's Aerodrome quote and swap forms with the adapter's supported WETH/USDC pair and valid raw-unit examples; generic zero-address defaults caused the quote query to revert with `UnsupportedPair`.
+- Added a Bun/create-wagmi Vite web console for loading deployed adapters, validating descriptors, encoding semantic inputs, resolving explicitly permitted External Requests, decoding query results, and preparing action bundles without execution.
+- Replaced Node-specific descriptor hex decoding with viem's browser-safe `hexToBytes` so the shared client can run in Vite.
+- The web console uses an exact HTTP-origin allowlist but explicitly does not claim production-grade DNS rebinding or private-network enforcement; browser CORS also remains applicable.
 - Added an Avantis hybrid adapter exposing account-bound positions and open-trade preparation for Base, based on the Base MCP Avantis plugin.
 - Used the live Avantis `/v2/trade/open` endpoint because the tx-builder OpenAPI has moved from the unversioned route still shown in the linked plugin document.
 - Kept protocol inputs in canonical onchain units and converted them to the tx-builder's human-decimal query format without floating-point arithmetic.
@@ -16,6 +31,7 @@ This document records implementation findings that affect the experimental inter
 - Limited prepared-action freshness to five minutes because pair listing, leverage envelopes, market hours, and open-interest capacity can change after tx-builder validation.
 - Extended generic descriptor and External Request end-to-end coverage to 15 capabilities across six adapters.
 - Measured Avantis adapter runtime at approximately 23.3 KB, leaving approximately 1.3 KB below EIP-170 and reinforcing the need to move descriptors out of adapter bytecode.
+- Added a top-level web console About section linking the repository, agent skill, and both pre-number ERC working papers.
 - Current verification: 30 Forge tests and 30 Bun tests pass; formatting, Oxlint, and TypeScript checks pass.
 
 ## 2026-08-24

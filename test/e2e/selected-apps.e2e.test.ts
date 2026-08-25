@@ -55,6 +55,8 @@ const testPrivateKey =
 const account = privateKeyToAccount(testPrivateKey);
 const weth = "0x4200000000000000000000000000000000000006" as Address;
 const usdc = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as Address;
+const aerodromeWethUsdcPool =
+  "0xcDAC0d6c6C59727a65F871236188350531885C43" as Address;
 const kyberRouter = "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5" as Address;
 const avantisTrading = "0x44914408af82bC9983bbb330e3578E1105e11d4e" as Address;
 const feeRecipient = "0x000000000000000000000000000000000000fee1" as Address;
@@ -573,6 +575,7 @@ afterAll(() => {
 describe("selected application adapters", () => {
   test("validates every published descriptor", async () => {
     for (const capability of [
+      [aerodromeAddress, aerodromeAbi, "queryDescriptor", "aerodrome.pool"],
       [
         aerodromeAddress,
         aerodromeAbi,
@@ -599,18 +602,9 @@ describe("selected application adapters", () => {
       ],
       [moonwellAddress, moonwellAbi, "queryDescriptor", "moonwell.positions"],
       [moonwellAddress, moonwellAbi, "queryDescriptor", "moonwell.health"],
-      [
-        moonwellAddress,
-        moonwellAbi,
-        "queryDescriptor",
-        "moonwell.position.usdc",
-      ],
-      [
-        moonwellAddress,
-        moonwellAbi,
-        "actionDescriptor",
-        "moonwell.supply.usdc",
-      ],
+      [moonwellAddress, moonwellAbi, "queryDescriptor", "moonwell.market"],
+      [moonwellAddress, moonwellAbi, "queryDescriptor", "moonwell.position"],
+      [moonwellAddress, moonwellAbi, "actionDescriptor", "moonwell.supply"],
       [kyberAddress, kyberAbi, "actionDescriptor", "kyberswap.swap.exactInput"],
       [avantisAddress, avantisAbi, "queryDescriptor", "avantis.positions"],
       [avantisAddress, avantisAbi, "actionDescriptor", "avantis.trade.open"],
@@ -661,6 +655,7 @@ describe("selected application adapters", () => {
         descriptor: aerodrome,
         values: {
           parameters: {
+            pool: aerodromeWethUsdcPool,
             tokenIn: weth,
             tokenOut: usdc,
             amountIn: 1_000_000_000_000_000n,
