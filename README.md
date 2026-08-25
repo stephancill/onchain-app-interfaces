@@ -10,6 +10,8 @@ The design context is in the [original technical handover](docs/Technical%20Hand
 
 Normative drafts live in `spec/`. Solidity interfaces live in `contracts/`. The TypeScript reference client lives in `src/client/`.
 
+Pre-number ERC working papers live in [`docs/eips/`](docs/eips/). They are formatted for eventual submission but remain subordinate to the experimental specifications until the ABIs are stabilized.
+
 - `spec/QUERIES.md` defines semantic application reads.
 - `spec/ACTIONS.md` defines semantic action preparation.
 - `spec/EXTERNAL_REQUEST.md` defines their shared external continuation mechanism.

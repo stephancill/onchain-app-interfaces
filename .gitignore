@@ -5,3 +5,4 @@ node_modules/
 out/
 cache/
 coverage/
+third-party/

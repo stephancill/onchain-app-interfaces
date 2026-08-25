@@ -28,6 +28,7 @@ Completed:
 - an Avantis positions/open-trade adapter with strict validation of tx-builder calldata.
 - consolidated cross-application findings and proposed solutions in `docs/prototype-findings.md`.
 - a shared descriptor profile with generic Zod validation, ABI parameter encoding, and semantic result decoding across all six adapters.
+- pre-number ERC working papers for External Request and the combined Application Queries and Actions interfaces.
 
 Not yet demonstrated:
 
@@ -148,7 +149,7 @@ Revisit every ABI field and deferred feature based on implementation evidence, i
 - application-adapter discovery and authenticity;
 - single URL and cross-chain call representation.
 
-Only then optimize and freeze the ABIs or prepare EIP/ERC drafts.
+Only then optimize and freeze the ABIs or submit the existing ERC working papers.
 
 ## Prototype Success Criteria
 

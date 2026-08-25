@@ -4,6 +4,10 @@ This document records implementation findings that affect the experimental inter
 
 ## 2026-08-25
 
+- Added two pre-number ERC working papers under `docs/eips/`: External HTTP Request Continuations and the combined Application Query and Action Interfaces proposal.
+- Followed the active EIP-1 and ERC repository structure, retained separate optional query and action ABIs in one application-interface proposal, and left descriptor serialization implementation-defined pending content-addressing and authenticity work.
+- Recorded the remaining pre-submission requirements: dedicated public discussion URLs, editor-assigned numbers, canonical repository validation, and ABI stabilization.
+- Scoped the root Bun test script to `test/` so ignored upstream guidance clones under `third-party/` are not mistaken for project test suites.
 - Added an Avantis hybrid adapter exposing account-bound positions and open-trade preparation for Base, based on the Base MCP Avantis plugin.
 - Used the live Avantis `/v2/trade/open` endpoint because the tx-builder OpenAPI has moved from the unversioned route still shown in the linked plugin document.
 - Kept protocol inputs in canonical onchain units and converted them to the tx-builder's human-decimal query format without floating-point arithmetic.
