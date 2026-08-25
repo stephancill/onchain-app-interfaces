@@ -21,7 +21,8 @@ Reference adapters live in `contracts/adapters/`:
 - a hybrid [Moonwell USDC adapter](docs/adapters/moonwell.md) combining external semantic queries with onchain action preparation.
 - a recursive [KyberSwap quote/build adapter](docs/adapters/kyberswap.md);
 - an authenticated [OpenSea stats/public-mint adapter](docs/adapters/opensea.md);
-- a query-only [Bitrefill catalog adapter](docs/adapters/bitrefill.md).
+- a query-only [Bitrefill catalog adapter](docs/adapters/bitrefill.md);
+- a hybrid [Avantis positions/open-trade adapter](docs/adapters/avantis.md) with validated tx-builder calldata.
 
 Cross-application evidence and proposed standards changes are consolidated in [`docs/prototype-findings.md`](docs/prototype-findings.md).
 

@@ -2,6 +2,18 @@
 
 This document records implementation findings that affect the experimental interfaces and specifications. It must not contain credentials, personal information, or private endpoint details.
 
+## 2026-08-25
+
+- Added an Avantis hybrid adapter exposing account-bound positions and open-trade preparation for Base, based on the Base MCP Avantis plugin.
+- Used the live Avantis `/v2/trade/open` endpoint because the tx-builder OpenAPI has moved from the unversioned route still shown in the linked plugin document.
+- Kept protocol inputs in canonical onchain units and converted them to the tx-builder's human-decimal query format without floating-point arithmetic.
+- Required the tx-builder response to preserve Base chain ID, signer, canonical Trading target, exact execution fee, and every decoded `openTrade` field. The service supplies validation and encoding but cannot change action semantics.
+- Added exact USDC approval only when TradingStorage allowance is insufficient and declared approval plus trade atomic-required.
+- Limited prepared-action freshness to five minutes because pair listing, leverage envelopes, market hours, and open-interest capacity can change after tx-builder validation.
+- Extended generic descriptor and External Request end-to-end coverage to 15 capabilities across six adapters.
+- Measured Avantis adapter runtime at approximately 23.3 KB, leaving approximately 1.3 KB below EIP-170 and reinforcing the need to move descriptors out of adapter bytecode.
+- Current verification: 30 Forge tests and 30 Bun tests pass; formatting, Oxlint, and TypeScript checks pass.
+
 ## 2026-08-24
 
 - Created the Foundry and Bun repository scaffold.

@@ -20,7 +20,7 @@ Text descriptors cannot let a generic client encode adapter structs, decode ABI 
 
 ### Prototype Result
 
-The v0.1 JSON profile in `spec/DESCRIPTORS.md` now describes all 13 capabilities across the five adapters. The TypeScript client:
+The v0.1 JSON profile in `spec/DESCRIPTORS.md` now describes all 15 capabilities across the six adapters. The TypeScript client:
 
 - validates descriptors with Zod;
 - rejects unknown versions, encodings, ABI types, duplicate fields, and malformed constraints;

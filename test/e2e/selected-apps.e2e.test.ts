@@ -10,6 +10,7 @@ import {
   http,
   keccak256,
   parseAbi,
+  parseUnits,
   stringToHex,
   type Abi,
   type Address,
@@ -44,6 +45,9 @@ const kyberSwapAbi = parseAbi([
 const seaDropMintAbi = parseAbi([
   "function mintPublic(address nftContract,address feeRecipient,address minter,uint256 quantity)",
 ]);
+const avantisTradingAbi = parseAbi([
+  "function openTrade((address trader,uint256 pairIndex,uint256 index,uint256 initialPosToken,uint256 positionSizeUSDC,uint256 openPrice,bool buy,uint256 leverage,uint256 tp,uint256 sl,uint256 timestamp) trade,uint8 orderType,uint256 slippagePercent) payable returns (uint256 orderId)",
+]);
 
 const testPrivateKey =
   // Public default Anvil account #0 key. Never use outside ephemeral test chains.
@@ -52,6 +56,7 @@ const account = privateKeyToAccount(testPrivateKey);
 const weth = "0x4200000000000000000000000000000000000006" as Address;
 const usdc = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as Address;
 const kyberRouter = "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5" as Address;
+const avantisTrading = "0x44914408af82bC9983bbb330e3578E1105e11d4e" as Address;
 const feeRecipient = "0x000000000000000000000000000000000000fee1" as Address;
 
 let anvil: ReturnType<typeof Bun.spawn>;
@@ -66,11 +71,13 @@ let openSeaAddress: Address;
 let bitrefillAddress: Address;
 let aerodromeAddress: Address;
 let moonwellAddress: Address;
+let avantisAddress: Address;
 let kyberAbi: Abi;
 let openSeaAbi: Abi;
 let bitrefillAbi: Abi;
 let aerodromeAbi: Abi;
 let moonwellAbi: Abi;
+let avantisAbi: Abi;
 let kyberRequestCount = 0;
 
 function reservePort(): number {
@@ -264,6 +271,69 @@ function startServer(certificate: { key: string; cert: string }) {
       if (url.pathname.startsWith("/v1/health/")) {
         return Response.json({ success: true, data: { healthFactor: 2.5 } });
       }
+      if (url.pathname === "/user-data") {
+        return Response.json({
+          positions: [
+            {
+              trader: url.searchParams.get("trader"),
+              pairIndex: 0,
+              index: 0,
+              buy: true,
+            },
+          ],
+          limitOrders: [],
+        });
+      }
+      if (url.pathname === "/v2/trade/open") {
+        const trader = url.searchParams.get("trader") as Address;
+        const orderTypes = {
+          market: 0,
+          stop_limit: 1,
+          limit: 2,
+          market_pnl: 3,
+        } as const;
+        const orderType = url.searchParams.get(
+          "orderType",
+        ) as keyof typeof orderTypes;
+        const data = encodeFunctionData({
+          abi: avantisTradingAbi,
+          functionName: "openTrade",
+          args: [
+            {
+              trader,
+              pairIndex: BigInt(url.searchParams.get("pairIndex") ?? "0"),
+              index: 0n,
+              initialPosToken: 0n,
+              positionSizeUSDC: parseUnits(
+                url.searchParams.get("collateralUsdc") ?? "0",
+                6,
+              ),
+              openPrice: parseUnits(
+                url.searchParams.get("openPrice") ?? "0",
+                10,
+              ),
+              buy: url.searchParams.get("side") === "long",
+              leverage: parseUnits(url.searchParams.get("leverage") ?? "0", 10),
+              tp: parseUnits(url.searchParams.get("takeProfit") ?? "0", 10),
+              sl: parseUnits(url.searchParams.get("stopLoss") ?? "0", 10),
+              timestamp: 0n,
+            },
+            orderTypes[orderType],
+            parseUnits(url.searchParams.get("slippagePercent") ?? "0", 10),
+          ],
+        });
+        return Response.json({
+          ok: true,
+          data: {
+            to: avantisTrading,
+            from: trader,
+            data,
+            value: `0x${BigInt(url.searchParams.get("executionFeeWei") ?? "0").toString(16)}`,
+            chainId: 8453,
+            description: "fixture trade",
+          },
+        });
+      }
       return new Response("not found", { status: 404 });
     },
   });
@@ -377,6 +447,7 @@ beforeAll(async () => {
     await Bun.file("out/SelectedAppMocks.sol/SelectedAppMockToken.json").json(),
   );
   await rpc("anvil_setCode", [weth, mockToken.deployedBytecode.object]);
+  await rpc("anvil_setCode", [usdc, mockToken.deployedBytecode.object]);
 
   const publicClient = createPublicClient({
     chain: foundry,
@@ -476,6 +547,20 @@ beforeAll(async () => {
     bytecode: moonwell.bytecode.object as Hex,
     args: [serviceOrigin],
   });
+
+  const avantis = artifactSchema.parse(
+    await Bun.file(
+      "out/AvantisApplicationAdapter.sol/AvantisApplicationAdapter.json",
+    ).json(),
+  );
+  avantisAbi = avantis.abi as Abi;
+  avantisAddress = await deploy({
+    walletClient,
+    publicClient,
+    abi: avantisAbi,
+    bytecode: avantis.bytecode.object as Hex,
+    args: [serviceOrigin, serviceOrigin],
+  });
 }, 30_000);
 
 afterAll(() => {
@@ -527,6 +612,8 @@ describe("selected application adapters", () => {
         "moonwell.supply.usdc",
       ],
       [kyberAddress, kyberAbi, "actionDescriptor", "kyberswap.swap.exactInput"],
+      [avantisAddress, avantisAbi, "queryDescriptor", "avantis.positions"],
+      [avantisAddress, avantisAbi, "actionDescriptor", "avantis.trade.open"],
       [
         openSeaAddress,
         openSeaAbi,
@@ -562,7 +649,7 @@ describe("selected application adapters", () => {
     }
   });
 
-  test("uses shared descriptors across all five adapters", async () => {
+  test("uses shared descriptors across all six adapters", async () => {
     const aerodrome = await loadDescriptor({
       address: aerodromeAddress,
       abi: aerodromeAbi,
@@ -828,5 +915,88 @@ describe("selected application adapters", () => {
         new TextDecoder().decode(Buffer.from(result.body.slice(2), "hex")),
       ).toContain(candidate.expected);
     }
+  });
+
+  test("resolves Avantis positions and validated open-trade calldata", async () => {
+    const positionsId = keccak256(stringToHex("avantis.positions"));
+    const positionsDescriptor = await loadDescriptor({
+      address: avantisAddress,
+      abi: avantisAbi,
+      functionName: "queryDescriptor",
+      id: positionsId,
+    });
+    if (positionsDescriptor.kind !== "query")
+      throw new Error("Expected Avantis query descriptor");
+    const positionsResult = (await resolve({
+      to: avantisAddress,
+      abi: avantisAbi,
+      functionName: "query",
+      data: encodeFunctionData({
+        abi: avantisAbi,
+        functionName: "query",
+        args: [
+          positionsId,
+          encodeDescriptorParameters({
+            descriptor: positionsDescriptor,
+            values: { account: account.address },
+          }),
+        ],
+      }),
+    })) as Hex;
+    const positions = decodeDescriptorResult({
+      descriptor: positionsDescriptor,
+      data: positionsResult,
+    }).result as { account: Address; body: Hex };
+    expect(positions.account.toLowerCase()).toBe(account.address.toLowerCase());
+    expect(
+      new TextDecoder().decode(Buffer.from(positions.body.slice(2), "hex")),
+    ).toContain("positions");
+
+    const actionId = keccak256(stringToHex("avantis.trade.open"));
+    const actionDescriptor = await loadDescriptor({
+      address: avantisAddress,
+      abi: avantisAbi,
+      functionName: "actionDescriptor",
+      id: actionId,
+    });
+    const prepared = (await resolve({
+      to: avantisAddress,
+      abi: avantisAbi,
+      functionName: "prepare",
+      data: encodeFunctionData({
+        abi: avantisAbi,
+        functionName: "prepare",
+        args: [
+          actionId,
+          account.address,
+          encodeDescriptorParameters({
+            descriptor: actionDescriptor,
+            values: {
+              parameters: {
+                pairIndex: 0,
+                isLong: true,
+                orderType: "LIMIT",
+                collateralUsdc: 100_000_000n,
+                leverage: 100_000_000_000n,
+                slippagePercent: 10_000_000_000n,
+                openPrice: 1_000_000_000_000_000n,
+                takeProfit: 1_200_000_000_000_000n,
+                stopLoss: 900_000_000_000_000n,
+                executionFeeWei: 350_000_000_000_000n,
+              },
+            },
+          }),
+        ],
+      }),
+    })) as {
+      calls: readonly { target: Address; value: bigint; data: Hex }[];
+      validUntil: bigint;
+    };
+    expect(prepared.calls).toHaveLength(2);
+    expect(prepared.calls[1]?.target.toLowerCase()).toBe(
+      avantisTrading.toLowerCase(),
+    );
+    expect(prepared.calls[1]?.value).toBe(350_000_000_000_000n);
+    expect(prepared.validUntil).toBeGreaterThan(0n);
   });
 });
