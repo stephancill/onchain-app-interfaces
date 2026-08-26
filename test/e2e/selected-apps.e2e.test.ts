@@ -281,9 +281,39 @@ function startServer(certificate: { key: string; cert: string }) {
               pairIndex: 0,
               index: 0,
               buy: true,
+              collateral: "100000000",
+              leverage: "100000000000",
+              openPrice: "1000000000000000",
+              tp: "1200000000000000",
+              sl: "900000000000000",
+              liquidationPrice: "850000000000000",
+              rolloverFee: "1000",
+              lossProtection: "0",
+              openedAt: 1_757_000_000,
+              isPnl: false,
+              isOneCT: false,
             },
           ],
-          limitOrders: [],
+          limitOrders: [
+            {
+              trader: url.searchParams.get("trader"),
+              pairIndex: 1,
+              index: 2,
+              buy: false,
+              block: 35_961_058,
+              collateral: "50000000",
+              positionSize: "500000000",
+              price: "20000000000000",
+              leverage: "100000000000",
+              tp: "18000000000000",
+              sl: "22000000000000",
+              slippageP: "10000000000",
+              executionFee: "0",
+              liquidationPrice: "22500000000000",
+              limitOrderType: 0,
+              isOneCT: false,
+            },
+          ],
         });
       }
       if (url.pathname === "/v2/trade/open") {
@@ -555,13 +585,38 @@ beforeAll(async () => {
       "out/AvantisApplicationAdapter.sol/AvantisApplicationAdapter.json",
     ).json(),
   );
+  const avantisActionCodec = artifactSchema.parse(
+    await Bun.file("out/AvantisActionCodec.sol/AvantisActionCodec.json").json(),
+  );
+  const avantisRequestCodec = artifactSchema.parse(
+    await Bun.file(
+      "out/AvantisRequestCodec.sol/AvantisRequestCodec.json",
+    ).json(),
+  );
+  const actionCodecAddress = await deploy({
+    walletClient,
+    publicClient,
+    abi: avantisActionCodec.abi as Abi,
+    bytecode: avantisActionCodec.bytecode.object as Hex,
+  });
+  const requestCodecAddress = await deploy({
+    walletClient,
+    publicClient,
+    abi: avantisRequestCodec.abi as Abi,
+    bytecode: avantisRequestCodec.bytecode.object as Hex,
+  });
   avantisAbi = avantis.abi as Abi;
   avantisAddress = await deploy({
     walletClient,
     publicClient,
     abi: avantisAbi,
     bytecode: avantis.bytecode.object as Hex,
-    args: [serviceOrigin, serviceOrigin],
+    args: [
+      serviceOrigin,
+      serviceOrigin,
+      actionCodecAddress,
+      requestCodecAddress,
+    ],
   });
 }, 30_000);
 
@@ -608,6 +663,17 @@ describe("selected application adapters", () => {
       [kyberAddress, kyberAbi, "actionDescriptor", "kyberswap.swap.exactInput"],
       [avantisAddress, avantisAbi, "queryDescriptor", "avantis.positions"],
       [avantisAddress, avantisAbi, "actionDescriptor", "avantis.trade.open"],
+      [avantisAddress, avantisAbi, "actionDescriptor", "avantis.trade.close"],
+      [avantisAddress, avantisAbi, "actionDescriptor", "avantis.limit.cancel"],
+      [avantisAddress, avantisAbi, "actionDescriptor", "avantis.margin.update"],
+      [avantisAddress, avantisAbi, "actionDescriptor", "avantis.limit.update"],
+      [avantisAddress, avantisAbi, "actionDescriptor", "avantis.delegate.set"],
+      [
+        avantisAddress,
+        avantisAbi,
+        "actionDescriptor",
+        "avantis.delegate.remove",
+      ],
       [
         openSeaAddress,
         openSeaAbi,
@@ -941,11 +1007,32 @@ describe("selected application adapters", () => {
     const positions = decodeDescriptorResult({
       descriptor: positionsDescriptor,
       data: positionsResult,
-    }).result as { account: Address; body: Hex };
-    expect(positions.account.toLowerCase()).toBe(account.address.toLowerCase());
-    expect(
-      new TextDecoder().decode(Buffer.from(positions.body.slice(2), "hex")),
-    ).toContain("positions");
+      inputValues: { account: account.address },
+    }) as {
+      positions: readonly {
+        trader: Address;
+        pairIndex: bigint;
+        collateral: bigint;
+        liquidationPrice: bigint;
+      }[];
+      limitOrders: readonly {
+        trader: Address;
+        pairIndex: bigint;
+        index: bigint;
+        price: bigint;
+      }[];
+    };
+    expect(positions.positions).toHaveLength(1);
+    expect(positions.positions[0]?.trader.toLowerCase()).toBe(
+      account.address.toLowerCase(),
+    );
+    expect(positions.positions[0]?.pairIndex).toBe(0n);
+    expect(positions.positions[0]?.collateral).toBe(100_000_000n);
+    expect(positions.positions[0]?.liquidationPrice).toBe(850_000_000_000_000n);
+    expect(positions.limitOrders).toHaveLength(1);
+    expect(positions.limitOrders[0]?.pairIndex).toBe(1n);
+    expect(positions.limitOrders[0]?.index).toBe(2n);
+    expect(positions.limitOrders[0]?.price).toBe(20_000_000_000_000n);
 
     const actionId = keccak256(stringToHex("avantis.trade.open"));
     const actionDescriptor = await loadDescriptor({

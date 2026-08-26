@@ -97,9 +97,9 @@ This is application-specific and should not be generalized into the External Req
 
 ## 5. JSON Is a Significant Onchain Integration Cost
 
-Moonwell can return raw JSON as semantic data, but KyberSwap and OpenSea require Solidity to extract and validate JSON before constructing calls. Full JSON parsing is expensive and difficult to secure.
+Moonwell can return raw JSON as semantic data, while KyberSwap, OpenSea, and Avantis require Solidity to extract and validate JSON before constructing calls or normalized semantic results. Full JSON parsing is expensive and difficult to secure.
 
-The prototype's `Json` library is deliberately narrow: bounded top-level field lookup, duplicate rejection, nested-object extraction, and strict address/hex/integer decoding. It is not a general JSON implementation.
+The prototype's `Json` library is deliberately narrow: bounded top-level field lookup, duplicate rejection, nested-object and array traversal, a fixed nesting-depth limit, and strict address/hex/integer/boolean decoding. Avantis uses it to normalize at most 64 current positions and 64 pending orders into typed ABI arrays. It is not a general JSON implementation.
 
 ### Proposed Solution
 

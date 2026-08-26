@@ -140,7 +140,7 @@ const examples = [
     name: "Avantis",
     chainId: "8453",
     rpcUrl: baseRpcUrl,
-    address: "0x53c8B42bf72C286e453D56F74831E9DFb975b0d6",
+    address: "0x8B223f20899589BaA13d1a8d9971Dd0cDDc6356b",
     externalOrigin:
       "https://core.avantisfi.com\nhttps://tx-builder.avantisfi.com",
   },
@@ -178,6 +178,7 @@ function jsonValue(value: unknown): string {
 }
 
 function defaultFieldValue(field: DescriptorField, account?: Address): unknown {
+  if (field.abiType.endsWith("[]")) return [];
   if (field.abiType === "tuple") {
     return Object.fromEntries(
       (field.components ?? []).map((component) => [
@@ -271,6 +272,58 @@ function defaultValues(
         takeProfit: "1200000000000000",
         stopLoss: "900000000000000",
         executionFeeWei: "350000000000000",
+      },
+    });
+  }
+  if (descriptor.name === "avantis.trade.close") {
+    return jsonValue({
+      parameters: {
+        pairIndex: "0",
+        tradeIndex: "0",
+        collateralToCloseUsdc: "100000000",
+        expectedPrice: "1000000000000000",
+        executionFeeWei: "350000000000000",
+      },
+    });
+  }
+  if (descriptor.name === "avantis.limit.cancel") {
+    return jsonValue({ parameters: { pairIndex: "0", orderIndex: "0" } });
+  }
+  if (descriptor.name === "avantis.margin.update") {
+    return jsonValue({
+      parameters: {
+        pairIndex: "0",
+        tradeIndex: "0",
+        action: "DEPOSIT",
+        collateralUsdc: "1000000",
+        oracleFeeWei: "1",
+      },
+    });
+  }
+  if (descriptor.name === "avantis.limit.update") {
+    return jsonValue({
+      parameters: {
+        pairIndex: "0",
+        orderIndex: "0",
+        price: "1000000000000000",
+        slippagePercent: "10000000000",
+        takeProfit: "1200000000000000",
+        stopLoss: "900000000000000",
+      },
+    });
+  }
+  if (descriptor.name === "avantis.delegate.set") {
+    return jsonValue({
+      parameters: {
+        delegate: "0x0000000000000000000000000000000000000001",
+        expirySeconds: String(Math.floor(Date.now() / 1000) + 60 * 60),
+      },
+    });
+  }
+  if (descriptor.name === "avantis.delegate.remove") {
+    return jsonValue({
+      parameters: {
+        delegate: "0x0000000000000000000000000000000000000001",
       },
     });
   }
@@ -448,6 +501,7 @@ function CapabilityCard(parameters: {
           result: decodeDescriptorResult({
             descriptor: capability.descriptor as QueryDescriptor,
             data: result,
+            inputValues: parsedValues,
           }),
         };
       }

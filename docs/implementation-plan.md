@@ -99,7 +99,7 @@ Exit criterion: the adapter materially reduces protocol-specific logic in the ge
 
 ## Phase 4: Shared Descriptor Prototype
 
-Status: initial v0.1 profile implemented across all 13 adapter capabilities. Arrays, cross-field constraints, content addressing, and user-facing rendering remain deferred.
+Status: the v0.1 profile is implemented across the reference adapters, including bounded one-dimensional dynamic arrays. Cross-field constraints, content addressing, and richer user-facing rendering remain deferred.
 
 Use the implemented query inputs, query outputs, action inputs, and action effects to compare descriptor representations.
 
