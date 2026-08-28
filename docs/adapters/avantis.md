@@ -6,10 +6,6 @@ Experimental hybrid adapter for Avantis perpetual positions and trade opening on
 
 The implementation is `contracts/adapters/AvantisApplicationAdapter.sol`.
 
-## Deployment
-
-The verified Base mainnet deployment is [`0x53c8B42bf72C286e453D56F74831E9DFb975b0d6`](https://basescan.org/address/0x53c8B42bf72C286e453D56F74831E9DFb975b0d6). It was deployed with the canonical core API and transaction-builder origins in transaction [`0x584d8693e289867c853fff4efac6ea7abdeefd7b7139e440412ae61470cfc07e`](https://basescan.org/tx/0x584d8693e289867c853fff4efac6ea7abdeefd7b7139e440412ae61470cfc07e).
-
 ## Purpose
 
 This adapter translates the Avantis capabilities documented by the Base MCP plugin into:

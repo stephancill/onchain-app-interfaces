@@ -5,5 +5,4 @@ node_modules/
 out/
 cache/
 coverage/
-web/dist/
 third-party/

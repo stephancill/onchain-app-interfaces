@@ -2,7 +2,6 @@ import {
   decodeAbiParameters,
   encodeAbiParameters,
   getAddress,
-  hexToBytes,
   isAddress,
   isHex,
   type AbiParameter,
@@ -186,7 +185,7 @@ export function parseApplicationDescriptor(
   let json: string;
   if (value instanceof Uint8Array) json = new TextDecoder().decode(value);
   else if (typeof value === "string" && value.startsWith("0x")) {
-    json = new TextDecoder().decode(hexToBytes(value as Hex));
+    json = new TextDecoder().decode(Buffer.from(value.slice(2), "hex"));
   } else json = value as string;
 
   const descriptor = applicationDescriptorSchema.parse(JSON.parse(json));
