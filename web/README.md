@@ -2,6 +2,8 @@
 
 A Vite and React console, scaffolded with `bun create wagmi`, for discovering and interacting with experimental Onchain Application Interface adapters.
 
+A live demo is deployed at <https://onchain-app-interfaces.pages.dev/> (Cloudflare Pages).
+
 The console reads descriptors, encodes semantic inputs, resolves permitted External Requests, decodes query results, and prepares action call bundles. Prepared bundles can be submitted through a connected wallet after review.
 
 Wallet execution uses EIP-5792 `wallet_sendCalls`. Actions marked `atomic-required` set `atomicRequired` and never fall back to sequential transactions. The connected wallet must match the preparation account, and expired preparations are rejected.

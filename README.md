@@ -72,6 +72,8 @@ const result = await resolveCall({
 
 An interactive Vite and React console lives in [`web/`](web/). It connects a wallet through wagmi, loads any adapter by chain ID, RPC URL, and address, discovers queries and actions, runs semantic queries, prepares action bundles, and submits them with EIP-5792 `wallet_sendCalls` after review.
 
+A live demo is deployed at <https://onchain-app-interfaces.pages.dev/> (Cloudflare Pages).
+
 ```sh
 cd web
 bun install
