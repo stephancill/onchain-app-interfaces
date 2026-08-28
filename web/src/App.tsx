@@ -138,7 +138,7 @@ const examples = [
     name: "Avantis",
     chainId: "8453",
     rpcUrl: baseRpcUrl,
-    address: "0x02a1c3b80ceedc01f8d83ee49f194b6d5bdf9232",
+    address: "0xfa5725214419f9688133841f67e10c4783d17b26",
     externalOrigin:
       "https://core.avantisfi.com\nhttps://tx-builder.avantisfi.com",
   },
