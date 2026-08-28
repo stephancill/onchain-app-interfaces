@@ -59,12 +59,49 @@ struct HttpRequest {
     RequestRequirement[] requirements;
 }
 
+enum ResponseBodyEncoding {
+    RAW,
+    JSON_ABI
+}
+
 struct HttpResponse {
     uint16 status;
     HttpHeader[] headers;
     bytes32 rawBodyHash;
-    uint8 bodyEncoding;
+    ResponseBodyEncoding bodyEncoding;
     bytes body;
+}
+
+enum ResponseTransformKind {
+    RAW,
+    JSON_ABI
+}
+
+enum JsonAbiNodeType {
+    TUPLE,
+    ARRAY,
+    BOOL,
+    UINT256_DECIMAL,
+    UINT256_HEX,
+    INT256_DECIMAL,
+    ADDRESS,
+    BYTES,
+    BYTES32,
+    STRING
+}
+
+struct JsonAbiNode {
+    JsonAbiNodeType nodeType;
+    string pointer;
+    uint16 childCount;
+    uint32 maxItems;
+}
+
+struct ResponseTransform {
+    ResponseTransformKind kind;
+    uint16 statusFrom;
+    uint16 statusTo;
+    JsonAbiNode[] nodes;
 }
 
 error ExternalRequest(
@@ -83,9 +120,7 @@ interface IExternalRequestCallback {
 }
 ```
 
-The ABI values of `RequestLocation.HEADER`, `RequestLocation.QUERY`, and `RequestLocation.BODY` are `0`, `1`, and `2`, respectively.
-
-`HttpResponse.bodyEncoding` is `0` for raw bytes and `1` for a client-projected ABI JSON body. `ResponseTransform` declares that projection; both the struct and its semantics are described in the experimental interface in `contracts/IExternalRequest.sol` and `spec/EXTERNAL_REQUEST.md`.
+The ABI values of `RequestLocation.HEADER`, `RequestLocation.QUERY`, and `RequestLocation.BODY` are `0`, `1`, and `2`, respectively. `ResponseBodyEncoding.RAW` is `0` and `ResponseBodyEncoding.JSON_ABI` is `1`. `ResponseTransformKind.RAW` is `0` and `ResponseTransformKind.JSON_ABI` is `1`. `ResponseTransform` and its `JsonAbiNode` tree are defined in [Response Transformation](#response-transformation).
 
 The canonical error signature is:
 
@@ -211,13 +246,31 @@ The callback response MUST be encoded as:
 HttpResponse({
     status: numericStatus,
     headers: headersInReceivedOrder,
-    body: rawResponseBody
+    rawBodyHash: keccak256(rawResponseBody),
+    bodyEncoding: computedBodyEncoding,
+    body: responseBody
 })
 ```
 
-The numeric HTTP status MUST fit in `uint16`. Response headers MUST be supplied in received order. The body MUST contain the response bytes after any transfer-coding processing performed by the HTTP stack and before application-specific decoding.
+The numeric HTTP status MUST fit in `uint16`. Response headers MUST be supplied in received order. `rawBodyHash` MUST be the `keccak256` digest over the exact raw response body delivered to this continuation step, before any projection. The `body` field MUST contain the raw response bytes after any transfer-coding processing performed by the HTTP stack and before application-specific decoding, unless the declared `ResponseTransform` requires projection (see [Response Transformation](#response-transformation)), in which case it MUST contain the projected ABI-encoded body. `bodyEncoding` MUST equal `ResponseBodyEncoding.RAW` in the first case and `ResponseBodyEncoding.JSON_ABI` in the second.
 
 Non-2xx statuses MUST NOT be treated as transport failures. DNS, TLS, connection, timeout, policy, size-limit, and malformed-response failures MUST NOT invoke the callback.
+
+### Response Transformation
+
+An adapter MAY declare a `ResponseTransform` in the `ExternalRequest` payload to have the client coerce the raw response body into a typed ABI body before the callback. A `ResponseTransform.kind` of `RAW` declares that the raw body MUST be delivered unchanged (`bodyEncoding == RAW`). A kind of `JSON_ABI` declares that the client MUST deliver a strictly coerced ABI-encoded body (`bodyEncoding == JSON_ABI`), unless the numeric status is outside the inclusive `statusFrom..statusTo` range, in which case the raw body MUST be delivered instead (`bodyEncoding == RAW`).
+
+Projection moves JSON decoding and ABI coercion to the client but does not authenticate the HTTP response: a callback MUST still validate the projected values against account binding, provenance, signatures or proofs, chains, assets, amounts, freshness, and replay protection needed by its application.
+
+The `ResponseTransform.nodes` array encodes one complete preorder projection tree. Every `JsonAbiNode` declares its `nodeType`; `pointer`, an RFC 6901 JSON Pointer evaluated relative to the parent node's JSON value (the empty pointer selects that parent value itself); `childCount`, the number of direct children; and `maxItems`, the maximum supported array length, which MUST be nonzero for `ARRAY` and zero for all other node types. Each node resolves the JSON value it selects for the callback ABI value:
+
+- A `TUPLE` node maps its ordered children to the ABI tuple components it represents.
+- An `ARRAY` node has exactly one child, the element schema, evaluated against each element of the JSON array. A nonzero `maxItems` MUST cap the array length, and every element MUST match the schema; empties and fixed-size arrays are otherwise unsupported.
+- A scalar node coerces the selected JSON value to exactly one ABI primitive: `BOOL`, `UINT256_DECIMAL`, `UINT256_HEX`, `INT256_DECIMAL`, `ADDRESS`, `BYTES`, `BYTES32`, or `STRING`.
+
+Projection MUST fail closed rather than produce defaults: missing JSON fields, `null`, type mismatches, malformed or out-of-range pointers, mismatched child counts, `ARRAY` nodes with other than one child, duplicate object keys, and imprecise numeric representations MUST revert the projection. Integers MUST be converted from their decimal or hexadecimal representation without JavaScript `number` intermediates.
+
+Clients MUST impose their own bounded limits on total node count, tree depth, selected value size, and projected-body size, and MUST reject projections that exceed them. Descriptor and projection data are untrusted; a client MUST NOT allocate unboundedly on their behalf.
 
 ### Continuation
 
@@ -250,6 +303,12 @@ Requirement values are excluded from callback data because returning them would 
 ### Structured Responses
 
 Returning status, headers, and raw body supports APIs whose application semantics depend on non-2xx statuses, media types, signatures, or binary data. Interpretation and verification remain application-specific callback responsibilities.
+
+### Response Projection
+
+Callbacks often need specific fields from a JSON API response rather than the whole document. Decoding that JSON on chain is expensive because small reads require general-purpose parsers, and it duplicates logic that the client already has. A declarative projection lets a contract describe, in its own revert payload, exactly how the client should coerce a JSON response into a typed ABI tuple, so the callback can `abi.decode` a compact struct directly.
+
+The projection is strictly single-use, bounded, and fails closed: it reduces on chain parsing cost while leaving authenticity and application semantics with the callback. The raw-body commitment and non-projected status range keep every projection verifiable against the bytes the adapter actually declared. Projection is a structural convenience, not a trust mechanism, and does not reduce the callback's validation responsibilities.
 
 ### Recursive Callbacks
 
@@ -356,22 +415,32 @@ For:
 
 ```text
 callbackFunction = 0x12345678
-response.status  = 200
-response.headers = [("Content-Type", "text/plain")]
-response.body    = 0x6f6b
-extraData        = 0x1122
+response.status    = 200
+response.headers   = [("Content-Type", "text/plain")]
+response.body      = 0x6f6b
+extraData          = 0x1122
 ```
 
 the callback calldata is:
 
 ```text
 0x12345678 || abi.encode(
-    (uint16(200), [("Content-Type", "text/plain")], hex"6f6b"),
+    (
+        uint16(200),
+        [("Content-Type", "text/plain")],
+        keccak256(hex"6f6b"),
+        uint8(0),        // ResponseBodyEncoding.RAW
+        hex"6f6b"
+    ),
     hex"1122"
 )
 ```
 
 A callback that succeeds with return data `0xcafe` resolves the original operation to `0xcafe`.
+
+### Projection Round Trip
+
+Given a `ResponseTransform` with `kind == JSON_ABI`, `statusFrom = 200`, `statusTo = 299`, and a preorder tree selecting `id` as a `UINT256_DECIMAL` the body of `{"id": 42, "name": "x"}` under a `TUPLE` root, the client MUST deliver a projected body equal to `abi.encode(uint256(42))` and a `bodyEncoding` of `JSON_ABI`, with `rawBodyHash` equal to the digest of the full raw `{"id": 42, "name": "x"}` bytes. The same transform against a `500` response MUST instead deliver the raw body with `bodyEncoding` of `RAW`.
 
 ### Rejection Cases
 
@@ -483,7 +552,7 @@ Response bodies can themselves contain private or bearer-secret data. This ABI d
 
 Contracts can request large responses, slow endpoints, recursive continuations, expensive parsing, or many requirement resolutions. Implementations need bounded request depth, response-header and body limits, timeouts, and cancellation.
 
-JSON and ABI decoders need to reject malformed, deeply nested, or resource-exhausting inputs safely.
+JSON and ABI decoders need to reject malformed, deeply nested, or resource-exhausting inputs safely. A declared projection is untrusted and can itself be huge, deep, or self-referential: clients MUST enforce their own node-count, depth, value-size, and projected-body limits before parsing or coercing a response, and MUST fail closed on any projection that exceeds them.
 
 ### Remote Side Effects
 

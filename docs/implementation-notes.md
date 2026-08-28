@@ -4,6 +4,10 @@ This document records implementation findings that affect the experimental inter
 
 ## 2026-08-28
 
+- Aligned `docs/eips/erc-draft-external-request.md` with the response-projection feature landed in earlier today: the draft now defines `ResponseBodyEncoding`, `ResponseTransformKind`, `JsonAbiNodeType`, `JsonAbiNode`, and `ResponseTransform` in its normative ABI, replacing the `uint8 bodyEncoding` and the deferral to the experimental spec. Added a normative Response Transformation section (preorder projection tree, coercion rules, fail-closed behavior, raw-body commitment, status gating), updated the HTTP Response and Continuation Encoding test vectors, and added a projection round-trip test plus Rationale and Denial-of-Service notes. Deliberately kept descriptor serialization implementation-defined as before; only the projection ABI and semantics were folded into the draft.
+
+## 2026-08-28
+
 - Deployed and verified the three web-console reference adapters on Base mainnet (8453), each a single `eth_sendTransaction` from the console deployer:
   - Aerodrome adapter `0x9c952d2530e8e94512f14fe6987fccb5d8a3b6e2`; Moonwell adapter `0xf5c03ce6356d9dafe49f3254b38f7e747958b0c0`; Avantis adapter `0x02a1c3b80ceedc01f8d83ee49f194b6d5bdf9232`. Each had a successful receipt (status 0x1) and live runtime bytecode (Aerodrome 8.9 KB, Moonwell 10.4 KB, Avantis 22.8 KB).
 - Updated the web console's example adapter list in `web/src/App.tsx` to point at the freshly deployed contracts so the demo loads the live adapters. Verified on Base that Aerodrome and Moonwell each return 5 query ids.
