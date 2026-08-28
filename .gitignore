@@ -6,3 +6,4 @@ out/
 cache/
 coverage/
 third-party/
+web/dist/

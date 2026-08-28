@@ -20,6 +20,14 @@ This document records implementation findings that affect the experimental inter
 - Confirmed viem covers all recursive ABI construction for projections; the only new client machinery is a strict JSON parser and projection evaluator. Duplicate object keys, missing fields, oversized arrays, and malformed trees fail closed.
 - Current verification: 31 Forge tests and 38 Bun tests pass, including new transform unit tests and the expanded Avantis e2e flow.
 
+## 2026-08-28
+
+- Restored the interactive web console in `web/` (Vite, React, wagmi) that was previously reverted, and adapted it to the current adapters and `avantis.*` capability names.
+- Made `parseApplicationDescriptor` browser-portable by replacing Node's `Buffer` with viem's `hexToBytes`; the browser test surfaced this as the only client dependency on Node globals.
+- Ran the console in a real Chromium browser against fresh adapter deployments on a local Anvil, with the HTTP fixture tunneled through a public HTTPS endpoint so the client's HTTPS requirement and origin authorization hold in the browser.
+- Verified in the browser: Avantis `avantis.positions` resolves through External Request and renders the projected typed trade/order tuples; `avantis.trade.open` prepares the USDC approval plus `openTrade` bundle from a projected transaction; Moonwell `moonwell.health` delivers its RAW JSON body bound to the requested account.
+- Current verification: 31 Forge tests and 38 Bun tests pass; root and web `bun run check`, `forge fmt`, and web production build all pass.
+
 ## 2026-08-25
 
 - Added two pre-number ERC working papers under `docs/eips/`: External HTTP Request Continuations and the combined Application Query and Action Interfaces proposal.

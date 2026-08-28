@@ -65,3 +65,15 @@ const result = await resolveCall({
 ```
 
 `authorizeRequest` is mandatory and runs before network access. It must enforce origin authorization, DNS/IP destination policy, and any user-consent requirements. It must not log sensitive requirement values.
+
+## Web Console
+
+An interactive Vite and React console lives in [`web/`](web/). It connects a wallet through wagmi, loads any adapter by chain ID, RPC URL, and address, discovers queries and actions, runs semantic queries, prepares action bundles, and submits them with EIP-5792 `wallet_sendCalls` after review.
+
+```sh
+cd web
+bun install
+bun run dev
+```
+
+External Requests require an exact origin allowlist entered on the page, and target APIs must permit browser CORS. The browser cannot enforce the full DNS and private-network policy of a production client.
