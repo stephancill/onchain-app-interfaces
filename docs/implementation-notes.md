@@ -2,24 +2,6 @@
 
 This document records implementation findings that affect the experimental interfaces and specifications. It must not contain credentials, personal information, or private endpoint details.
 
-## 2026-08-26 (later)
-
-- Measured the onchain Avantis positions normalization on a local node: even after enabling the Solidity optimizer (previously disabled in `foundry.toml`), zero-allocation field parsers, assembly word-copying in `Json.slice`, and a fused single-pass array extractor, typed JSON extraction cost ~650k gas per position. A worst-case descriptor-bounded response (64 items per collection) exceeded public RPC `eth_call` gas limits by far; the practical ceiling was roughly 24 items.
-- Replaced onchain positions normalization with a declarative client-side transform. Query descriptors now support `output.encoding: "json"`: the adapter callback validates status and size and returns the raw body, while the generic client extracts typed values using per-field selection paths (`path`, defaulting to the field name) and enforces item bounds during extraction.
-- Added declarative caller binding via `equalsInput`: every extracted value of a bound field must equal a named input parameter (addresses case-insensitively). This restores the trader-binding guarantee that previously lived in the deleted positions codec, without contract-side parsing.
-- Removed `AvantisPositionsCodec` from the Avantis deployment; the adapter constructor now takes only the action and request codecs. The positions query no longer returns an echoed account or onchain observation timestamp; clients stamp observation time locally.
-- Specified the JSON output profile normatively in `spec/DESCRIPTORS.md`: path grammar (identifier segments, at most one `[]` iteration segment), required failure behavior on missing keys, shape mismatches, and binding violations, and the trust-model note that JSON outputs are origin-authenticated rather than contract-verified.
-
-## 2026-08-26
-
-- Extended descriptor v0.1 with bounded one-dimensional dynamic arrays, including recursive tuple-array encoding and decoding, item-bound enforcement, and duplicate component-name rejection.
-- Replaced Avantis's opaque HTTP-body result with typed `AvantisPosition[]` and `AvantisLimitOrder[]` values in canonical protocol units. The callback validates every required JSON field, binds each item to the requested trader, rejects more than 64 items per collection, caps responses at 128 KB, and limits JSON nesting depth.
-- Expanded the Avantis v2 adapter from open-only preparation to open, close, cancel-limit, margin-update, pending-limit-update, set-delegate, and remove-delegate actions. Every builder result pins Base, signer, router, native value, selector, semantic fields, and canonical calldata encoding; open and margin deposits prepend exact USDC approval only when needed.
-- Split Avantis descriptor, positions parsing, request construction, and action validation into auditable helper contracts to retain EIP-170 safety margins. The adapter authenticates each separately deployed codec by runtime code hash and exposes its selected codec addresses.
-- Reduced Avantis slippage to the protocol's 80% ceiling and preparation validity to one minute. Position and order indices remain reusable protocol slots, so clients must re-simulate immediately before execution.
-- Global TP/SL updates for open positions now use an EIP-712 intent followed by an HTTP submission in Avantis v2 and cannot be represented honestly as the current `PreparedAction` output. Pending limit-order TP/SL updates remain available as direct prepared calls.
-- Deployed and verified the expanded Avantis adapter on Base at `0x8B223f20899589BaA13d1a8d9971Dd0cDDc6356b`, with authenticated positions, action, and request codecs at `0xB2d66277B7258B709d6bC9b54ee34959b6FAD280`, `0x460a31b433DFBE899aC48141b3240EDA6Ac66Da0`, and `0xc5AE01b76468703B0c6023Ac7Db41583603c8C69`. Its constructor-created descriptor is verified at `0x6eBd51d8a92f048C4e41D8D0B2A6FDEFB13F21c8`; a live generic-client continuation returns readable typed `positions` and `limitOrders` arrays rather than a hex HTTP body.
-
 ## 2026-08-25
 
 - Generalized the Aerodrome adapter from one embedded WETH/USDC pool to caller-selected canonical Base pools. Every query and action now validates factory membership, derives pool tokens and the stable flag onchain, and remains restricted to one direct route through the canonical router and factory.
