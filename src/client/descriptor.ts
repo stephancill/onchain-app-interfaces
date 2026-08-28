@@ -318,9 +318,27 @@ export function encodeDescriptorParameters(parameters: {
   );
 }
 
+function decodeJsonBytes(value: Hex): unknown {
+  const text = new TextDecoder().decode(hexToBytes(value));
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
 function namedDecodedValue(field: DescriptorField, value: unknown): unknown {
   const core = coreAbiType(field);
   const arraySuffix = field.abiType.slice(core.length);
+  if (
+    core === "bytes" &&
+    field.contentType === "application/json" &&
+    field.sensitivity !== "bearer-secret" &&
+    typeof value === "string" &&
+    isHex(value)
+  ) {
+    return decodeJsonBytes(value);
+  }
   if (core !== "tuple") return value;
   const components = field.components ?? [];
   const nameTuple = (candidate: unknown): unknown => {

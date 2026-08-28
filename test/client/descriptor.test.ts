@@ -110,6 +110,55 @@ describe("application descriptors", () => {
     });
   });
 
+  test("decodes a JSON-content bytes field into an object", () => {
+    const descriptor = parseApplicationDescriptor(
+      JSON.stringify({
+        version: "0.1",
+        kind: "query",
+        name: "example.json",
+        inputs: { encoding: "abi", fields: [] },
+        output: {
+          encoding: "abi",
+          fields: [
+            {
+              name: "result",
+              abiType: "tuple",
+              components: [
+                { name: "status", abiType: "uint16" },
+                {
+                  name: "body",
+                  abiType: "bytes",
+                  contentType: "application/json",
+                  sensitivity: "public",
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+    if (descriptor.kind !== "query")
+      throw new Error("Expected query descriptor");
+    const body = JSON.stringify({ ok: true, data: [{ name: "ETH/USD" }] });
+    const data = encodeAbiParameters(
+      [
+        {
+          type: "tuple",
+          components: [
+            { name: "status", type: "uint16" },
+            { name: "body", type: "bytes" },
+          ],
+        },
+      ],
+      [{ status: 200, body: `0x${Buffer.from(body).toString("hex")}` }],
+    );
+    const decoded = decodeDescriptorResult({ descriptor, data });
+    expect(decoded.result).toEqual({
+      status: 200,
+      body: JSON.parse(body),
+    });
+  });
+
   test("rejects unknown versions and ABI types", () => {
     expect(() =>
       parseApplicationDescriptor(actionJson.replace('"0.1"', '"1.0"')),

@@ -995,12 +995,7 @@ describe("selected application adapters", () => {
       data: stats,
     });
     expect(
-      new TextDecoder().decode(
-        Buffer.from(
-          (decodedStats.result as { body: Hex }).body.slice(2),
-          "hex",
-        ),
-      ),
+      JSON.stringify((decodedStats.result as { body: unknown }).body),
     ).toContain("floor_price");
 
     const mintDescriptor = await loadDescriptor({
@@ -1092,13 +1087,12 @@ describe("selected application adapters", () => {
       const result = decoded.result as {
         status: number;
         sensitive: boolean;
-        body: Hex;
+        body: unknown;
       };
       expect(result.status).toBe(200);
       expect(result.sensitive).toBe(false);
-      expect(
-        new TextDecoder().decode(Buffer.from(result.body.slice(2), "hex")),
-      ).toContain(candidate.expected);
+      expect(typeof result.body).toBe("object");
+      expect(JSON.stringify(result.body)).toContain(candidate.expected);
     }
   });
 
