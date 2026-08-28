@@ -6,6 +6,7 @@ import {
   encodeExternalRequestCallback,
 } from "./abi.ts";
 import { completeRequest, executeHttpRequest } from "./request.ts";
+import { transformHttpResponse } from "./transform.ts";
 import type {
   AuthorizeRequest,
   EthCall,
@@ -77,12 +78,17 @@ export async function resolveCall(parameters: {
         completedRequest: completed.request,
         requirements: completed.requirements,
       });
-      const response = await executeHttpRequest({
+      const rawResponse = await executeHttpRequest({
         request: completed.request,
         ...(parameters.fetch === undefined ? {} : { fetch: parameters.fetch }),
         ...(parameters.maxResponseBytes === undefined
           ? {}
           : { maxResponseBytes: parameters.maxResponseBytes }),
+      });
+
+      const response = transformHttpResponse({
+        response: rawResponse,
+        transform: externalRequest.responseTransform,
       });
 
       call = {

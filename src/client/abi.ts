@@ -9,6 +9,13 @@ import {
 import { z } from "zod";
 
 import type { ExternalRequestData, HttpResponse } from "./types.ts";
+import {
+  jsonAbiNodeTypes,
+  responseBodyEncodings,
+  responseTransformKinds,
+  type JsonAbiNodeType,
+  type ResponseTransformKind,
+} from "./types.ts";
 
 const addressSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/);
 const hexSchema = z.string().regex(/^0x(?:[0-9a-fA-F]{2})*$/);
@@ -47,6 +54,25 @@ export const externalRequestAbi = [
           },
         ],
       },
+      {
+        name: "responseTransform",
+        type: "tuple",
+        components: [
+          { name: "kind", type: "uint8" },
+          { name: "statusFrom", type: "uint16" },
+          { name: "statusTo", type: "uint16" },
+          {
+            name: "nodes",
+            type: "tuple[]",
+            components: [
+              { name: "nodeType", type: "uint8" },
+              { name: "pointer", type: "string" },
+              { name: "childCount", type: "uint16" },
+              { name: "maxItems", type: "uint32" },
+            ],
+          },
+        ],
+      },
       { name: "callbackFunction", type: "bytes4" },
       { name: "extraData", type: "bytes" },
     ],
@@ -54,7 +80,7 @@ export const externalRequestAbi = [
 ] as const;
 
 const callbackParameters = parseAbiParameters(
-  "(uint16 status, (string name, string value)[] headers, bytes body) response, bytes extraData",
+  "(uint16 status, (string name, string value)[] headers, bytes32 rawBodyHash, uint8 bodyEncoding, bytes body) response, bytes extraData",
 );
 
 const externalRequestSchema = z.object({
@@ -73,6 +99,19 @@ const externalRequestSchema = z.object({
       }),
     ),
   }),
+  responseTransform: z.object({
+    kind: z.union([z.literal(0), z.literal(1)]),
+    statusFrom: z.number().int().min(0).max(65535),
+    statusTo: z.number().int().min(0).max(65535),
+    nodes: z.array(
+      z.object({
+        nodeType: z.number().int().min(0).max(9),
+        pointer: z.string(),
+        childCount: z.number().int().min(0).max(65535),
+        maxItems: z.number().int().min(0).max(4_294_967_295),
+      }),
+    ),
+  }),
   callbackFunction: selectorSchema,
   extraData: hexSchema,
 });
@@ -83,10 +122,12 @@ export function decodeExternalRequest(data: Hex): ExternalRequestData {
     throw new Error("Revert is not ExternalRequest");
   }
 
-  const [sender, request, callbackFunction, extraData] = decoded.args;
+  const [sender, request, responseTransform, callbackFunction, extraData] =
+    decoded.args;
   const parsed = externalRequestSchema.parse({
     sender,
     request,
+    responseTransform,
     callbackFunction,
     extraData,
   });
@@ -100,6 +141,19 @@ export function decodeExternalRequest(data: Hex): ExternalRequestData {
       requirements: parsed.request.requirements.map((requirement) => ({
         ...requirement,
         location: locations[requirement.location],
+      })),
+    },
+    responseTransform: {
+      kind: responseTransformKinds[
+        parsed.responseTransform.kind
+      ] as ResponseTransformKind,
+      statusFrom: parsed.responseTransform.statusFrom,
+      statusTo: parsed.responseTransform.statusTo,
+      nodes: parsed.responseTransform.nodes.map((node) => ({
+        nodeType: jsonAbiNodeTypes[node.nodeType] as JsonAbiNodeType,
+        pointer: node.pointer,
+        childCount: node.childCount,
+        maxItems: node.maxItems,
       })),
     },
     callbackFunction: parsed.callbackFunction as Hex,
@@ -116,6 +170,10 @@ export function encodeExternalRequestCallback(parameters: {
     {
       status: parameters.response.status,
       headers: parameters.response.headers,
+      rawBodyHash: parameters.response.rawBodyHash,
+      bodyEncoding: responseBodyEncodings.indexOf(
+        parameters.response.bodyEncoding,
+      ),
       body: parameters.response.body,
     },
     parameters.extraData,

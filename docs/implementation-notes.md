@@ -2,6 +2,24 @@
 
 This document records implementation findings that affect the experimental interfaces and specifications. It must not contain credentials, personal information, or private endpoint details.
 
+## 2026-08-28
+
+- Expanded the Avantis adapter from one query and one action to five queries and eight actions covering metadata, markets, account state, positions, opening, closing, pending-order management, position increases, margin changes, and expiring delegates.
+- Migrated reads and transaction preparation to the live Avantis v2 tx-builder surface. The Base MCP plugin v0.2 still documents several removed unversioned routes and older position response shapes.
+- Required byte-for-byte calldata equality for deterministic builder actions. Margin updates instead validate every semantic field and canonical encoding while accepting fresh Pyth update bytes that the protocol verifies onchain.
+- Kept USDC approvals local, exact, conditional, and ordered before collateral-pulling actions. Delegate calls are also constructed locally because they need no external validation.
+- Did not expose active-position TP/SL updates because Avantis v2 now provides only EIP-712 intent builders for that operation, while `PreparedAction` can represent only EVM calls. This is a concrete requirement for a future signature-preparation capability.
+- Moved Avantis JSON descriptors into an automatically deployed companion contract. Descriptor separation alone did not make the comprehensive unoptimized adapter deployable; enabling the Solidity optimizer reduced runtime from approximately 33.4 KB to under EIP-170.
+- Added descriptor-driven end-to-end coverage for all externally built Avantis actions, including independent calldata reconstruction, fixed-point URL conversion, dynamic oracle data, approvals, and call ordering.
+- Added response transformations to External Request. Contracts now declare a `ResponseTransform` that the continuation client applies before invoking the callback.
+- Introduced a flattened preorder projection tree (`JsonAbiNode[]`) covering scalars, tuples, arrays of tuples, and nested arrays with strict bounds, relative RFC 6901 JSON Pointers, and deterministic coercion without floating-point intermediates.
+- Expanded `HttpResponse` with a raw-body `keccak256` commitment and a `bodyEncoding` discriminator. Non-2xx statuses are still delivered raw so callbacks keep full control of error bodies.
+- Replaced Avantis's onchain JSON parsing with client-side projection. Transaction and positions callbacks now `abi.decode` typed structs; account binding, chain, target, signer, value, and built calldata are still verified in Solidity. The margin callback still decodes builder-supplied Pyth update bytes.
+- Measured the resulting callback gas reduction on the Avantis unit suite: open-trade callback fell from approximately 3.8 million to approximately 26 thousand simulated gas, and the margin callback from approximately 3.1 million to approximately 107 thousand.
+- Simplified the `avantis.positions` result from an opaque JSON body to named arrays of trade and order tuples, and extended the descriptor profile to describe `tuple[]` fields so a generic client can decode them.
+- Confirmed viem covers all recursive ABI construction for projections; the only new client machinery is a strict JSON parser and projection evaluator. Duplicate object keys, missing fields, oversized arrays, and malformed trees fail closed.
+- Current verification: 31 Forge tests and 38 Bun tests pass, including new transform unit tests and the expanded Avantis e2e flow.
+
 ## 2026-08-25
 
 - Added two pre-number ERC working papers under `docs/eips/`: External HTTP Request Continuations and the combined Application Query and Action Interfaces proposal.

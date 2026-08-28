@@ -3,7 +3,16 @@ pragma solidity ^0.8.30;
 
 import {Call, IApplicationActions, PreparedAction} from "../IApplicationActions.sol";
 import {IApplicationQueries} from "../IApplicationQueries.sol";
-import {ExternalRequest, HttpHeader, HttpRequest, HttpResponse, RequestRequirement} from "../IExternalRequest.sol";
+import {
+    ExternalRequest,
+    HttpHeader,
+    HttpRequest,
+    HttpResponse,
+    JsonAbiNode,
+    RequestRequirement,
+    ResponseTransform,
+    ResponseTransformKind
+} from "../IExternalRequest.sol";
 
 struct MoonwellExternalQueryResult {
     bytes32 queryId;
@@ -217,6 +226,7 @@ contract MoonwellApplicationAdapter is IApplicationQueries, IApplicationActions 
                 body: bytes(""),
                 requirements: requirements
             }),
+            responseTransform: _rawTransform(),
             callbackFunction: this.externalQueryCallback.selector,
             extraData: abi.encode(queryId, account)
         });
@@ -234,5 +244,10 @@ contract MoonwellApplicationAdapter is IApplicationQueries, IApplicationActions 
             output[3 + i * 2] = symbols[byteValue & 0x0f];
         }
         return string(output);
+    }
+
+    function _rawTransform() private pure returns (ResponseTransform memory transform) {
+        JsonAbiNode[] memory nodes = new JsonAbiNode[](0);
+        transform = ResponseTransform({kind: ResponseTransformKind.RAW, statusFrom: 0, statusTo: 0, nodes: nodes});
     }
 }

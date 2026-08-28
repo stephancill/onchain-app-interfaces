@@ -26,15 +26,52 @@ export type HttpRequest = {
 
 export type CompletedHttpRequest = Omit<HttpRequest, "requirements">;
 
+export const responseBodyEncodings = ["RAW", "JSON_ABI"] as const;
+export type ResponseBodyEncoding = (typeof responseBodyEncodings)[number];
+
 export type HttpResponse = {
   status: number;
   headers: HttpHeader[];
+  rawBodyHash: Hex;
+  bodyEncoding: ResponseBodyEncoding;
   body: Hex;
+};
+
+export const responseTransformKinds = ["RAW", "JSON_ABI"] as const;
+export type ResponseTransformKind = (typeof responseTransformKinds)[number];
+
+export const jsonAbiNodeTypes = [
+  "TUPLE",
+  "ARRAY",
+  "BOOL",
+  "UINT256_DECIMAL",
+  "UINT256_HEX",
+  "INT256_DECIMAL",
+  "ADDRESS",
+  "BYTES",
+  "BYTES32",
+  "STRING",
+] as const;
+export type JsonAbiNodeType = (typeof jsonAbiNodeTypes)[number];
+
+export type JsonAbiNode = {
+  nodeType: JsonAbiNodeType;
+  pointer: string;
+  childCount: number;
+  maxItems: number;
+};
+
+export type ResponseTransform = {
+  kind: ResponseTransformKind;
+  statusFrom: number;
+  statusTo: number;
+  nodes: JsonAbiNode[];
 };
 
 export type ExternalRequestData = {
   sender: Address;
   request: HttpRequest;
+  responseTransform: ResponseTransform;
   callbackFunction: Hex;
   extraData: Hex;
 };

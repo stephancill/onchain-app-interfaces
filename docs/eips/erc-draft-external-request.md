@@ -62,10 +62,18 @@ struct HttpRequest {
 struct HttpResponse {
     uint16 status;
     HttpHeader[] headers;
+    bytes32 rawBodyHash;
+    uint8 bodyEncoding;
     bytes body;
 }
 
-error ExternalRequest(address sender, HttpRequest request, bytes4 callbackFunction, bytes extraData);
+error ExternalRequest(
+    address sender,
+    HttpRequest request,
+    ResponseTransform responseTransform,
+    bytes4 callbackFunction,
+    bytes extraData
+);
 
 interface IExternalRequestCallback {
     function externalRequestCallback(HttpResponse calldata response, bytes calldata extraData)
@@ -77,10 +85,12 @@ interface IExternalRequestCallback {
 
 The ABI values of `RequestLocation.HEADER`, `RequestLocation.QUERY`, and `RequestLocation.BODY` are `0`, `1`, and `2`, respectively.
 
+`HttpResponse.bodyEncoding` is `0` for raw bytes and `1` for a client-projected ABI JSON body. `ResponseTransform` declares that projection; both the struct and its semantics are described in the experimental interface in `contracts/IExternalRequest.sol` and `spec/EXTERNAL_REQUEST.md`.
+
 The canonical error signature is:
 
 ```text
-ExternalRequest(address,(string,string,(string,string)[],bytes,(uint8,string,string,bool)[]),bytes4,bytes)
+ExternalRequest(address,(string,string,(string,string)[],bytes,(uint8,string,string,bool)[]),(uint8,uint16,uint16,(uint8,string,uint16,uint32)[]),bytes4,bytes)
 ```
 
 Its selector is `0x062cdd56`.

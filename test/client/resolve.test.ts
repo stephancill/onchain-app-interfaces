@@ -27,6 +27,12 @@ function externalRequest(sender: Address = resolver): Hex {
           },
         ],
       },
+      {
+        kind: 0,
+        statusFrom: 0,
+        statusTo: 0,
+        nodes: [],
+      },
       callbackFunction,
       "0x1122",
     ],

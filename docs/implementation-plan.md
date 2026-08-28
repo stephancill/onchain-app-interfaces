@@ -25,7 +25,7 @@ Completed:
 - a Base fork observe, prepare, execute, and observe-again test using the returned call bundle unchanged.
 - a hybrid Moonwell adapter with external cross-market queries, onchain USDC position aggregation, and account-aware supply preparation.
 - KyberSwap recursive quote/build, OpenSea authenticated query/mint, and Bitrefill authenticated query-only adapters.
-- an Avantis positions/open-trade adapter with strict validation of tx-builder calldata.
+- a comprehensive Avantis v2 markets and position-management adapter with strict validation of tx-builder calldata.
 - consolidated cross-application findings and proposed solutions in `docs/prototype-findings.md`.
 - a shared descriptor profile with generic Zod validation, ABI parameter encoding, and semantic result decoding across all six adapters.
 - pre-number ERC working papers for External Request and the combined Application Queries and Actions interfaces.
@@ -99,7 +99,7 @@ Exit criterion: the adapter materially reduces protocol-specific logic in the ge
 
 ## Phase 4: Shared Descriptor Prototype
 
-Status: initial v0.1 profile implemented across all 13 adapter capabilities. Arrays, cross-field constraints, content addressing, and user-facing rendering remain deferred.
+Status: initial v0.1 profile implemented across all 26 adapter capabilities. Dynamic scalar and tuple arrays are supported; cross-field constraints, content addressing, and user-facing rendering remain deferred.
 
 Use the implemented query inputs, query outputs, action inputs, and action effects to compare descriptor representations.
 

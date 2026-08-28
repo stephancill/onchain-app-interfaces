@@ -88,11 +88,35 @@ The callback receives an ABI-encoded `HttpResponse` containing:
 
 - the numeric HTTP status;
 - response headers in received order;
-- the raw response body.
+- `rawBodyHash`, a `keccak256` commitment over the exact raw response body;
+- `bodyEncoding`, whether `body` carries the raw bytes or a projected ABI body;
+- the response body.
 
 Clients MUST NOT treat non-2xx status codes as transport failures. They are delivered to the callback for application-level interpretation. DNS, TLS, connection, timeout, policy, size-limit, and malformed-response failures MUST NOT invoke the callback.
 
 Clients MUST impose configurable response-body and header-size limits.
+
+## Response Transformation
+
+An adapter MAY declare a `ResponseTransform` in the `ExternalRequest` payload. Raw responses are recommended for opaque application data; projection is recommended when a callback must decode or validate response fields.
+
+`ResponseTransform.kind` MUST be `RAW` or `JSON_ABI`:
+
+- With `RAW`, the client MUST deliver the raw response body unchanged and set `bodyEncoding == RAW`.
+- With `JSON_ABI`, the client MUST deliver a strictly coerced ABI-encoded body and set `bodyEncoding == JSON_ABI`, unless the status is outside `statusFrom..statusTo`, in which case the raw body is delivered.
+
+### Projection Tree
+
+`JSON_ABI` nodes form one complete preorder tree. Each `JsonAbiNode` declares a node type, an RFC 6901 JSON Pointer relative to the parent node's JSON value, a direct child count, and an array maximum.
+
+- `TUPLE` nodes map their ordered children to ABI tuple components.
+- `ARRAY` nodes have exactly one child, which is the element schema evaluated against each element of the JSON array. A non-zero `maxItems` MUST cap array length; every element MUST match.
+- Scalar nodes coerce the selected JSON value to one ABI primitive: `bool`, decimal or hexadecimal `uint256`, decimal `int256`, `address`, `bytes`, `bytes32`, or `string`.
+- Missing JSON fields, `null`, type mismatches, and malformed pointers MUST fail the projection rather than produce defaults.
+- Duplicate object keys and imprecise numeric representations MUST be rejected. Integers MUST be converted without JavaScript `number` intermediates.
+- Clients MUST impose their own node count, tree depth, total value, and projected-body limits and reject projections that exceed them.
+
+The ordered tree defines the single ABI value encoded into `HttpResponse.body`. The callback MUST decode `body` using exactly that projected shape; `rawBodyHash` documents which raw response the projection came from. Projection moves JSON decoding and coercion to the client but does not authenticate the HTTP response: callbacks MUST still validate account binding, provenance, and semantics themselves.
 
 ## Redirects
 

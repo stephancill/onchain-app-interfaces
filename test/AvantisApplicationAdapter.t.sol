@@ -2,13 +2,21 @@
 pragma solidity ^0.8.30;
 
 import {PreparedAction} from "../contracts/IApplicationActions.sol";
-import {HttpHeader, HttpResponse} from "../contracts/IExternalRequest.sol";
+import {HttpHeader, HttpResponse, ResponseBodyEncoding} from "../contracts/IExternalRequest.sol";
 import {
+    AvantisAccountState,
     AvantisApplicationAdapter,
+    AvantisDelegateParameters,
+    AvantisMarginAction,
+    AvantisMarginParameters,
     AvantisOpenTradeParameters,
+    AvantisOrderInfo,
     AvantisOrderType,
+    AvantisPositionsBody,
     AvantisPositionsResult,
     AvantisTrade,
+    AvantisTradeInfo,
+    AvantisTransaction,
     IAvantisTrading
 } from "../contracts/adapters/AvantisApplicationAdapter.sol";
 
@@ -18,7 +26,7 @@ interface AvantisVm {
 
 contract AvantisMockToken {
     function balanceOf(address) external pure returns (uint256) {
-        return type(uint256).max;
+        return 1_000_000e6;
     }
 
     function allowance(address, address) external pure returns (uint256) {
@@ -28,37 +36,63 @@ contract AvantisMockToken {
 
 contract AvantisApplicationAdapterTest {
     AvantisVm internal constant vm = AvantisVm(address(uint160(uint256(keccak256("hevm cheat code")))));
-    AvantisApplicationAdapter internal adapter =
-        new AvantisApplicationAdapter("https://core.avantisfi.com", "https://tx-builder.avantisfi.com");
+    AvantisApplicationAdapter internal adapter = new AvantisApplicationAdapter("https://tx-builder.avantisfi.com");
 
     function setUp() external {
         AvantisMockToken token = new AvantisMockToken();
         vm.etch(adapter.USDC(), address(token).code);
     }
 
-    function testDiscoversQueryAndAction() external view {
+    function testDiscoversComprehensiveQueriesAndActions() external view {
         bytes32[] memory queryIds = adapter.queries();
         bytes32[] memory actionIds = adapter.actions();
-        require(queryIds.length == 1 && queryIds[0] == adapter.POSITIONS_QUERY(), "missing positions query");
-        require(actionIds.length == 1 && actionIds[0] == adapter.OPEN_TRADE_ACTION(), "missing open action");
+        require(queryIds.length == 5, "wrong query count");
+        require(queryIds[0] == adapter.META_QUERY(), "missing meta query");
+        require(queryIds[1] == adapter.MARKETS_QUERY(), "missing markets query");
+        require(queryIds[2] == adapter.MARKET_QUERY(), "missing market query");
+        require(queryIds[3] == adapter.POSITIONS_QUERY(), "missing positions query");
+        require(queryIds[4] == adapter.ACCOUNT_QUERY(), "missing account query");
+        require(actionIds.length == 8, "wrong action count");
+        require(actionIds[0] == adapter.OPEN_TRADE_ACTION(), "missing open action");
+        require(actionIds[7] == adapter.REMOVE_DELEGATE_ACTION(), "missing delegate action");
     }
 
-    function testPositionsCallbackBindsAccount() external view {
+    function testExternalQueryCallbackBindsProjectedPositions() external view {
         address account = address(0xbeef);
-        HttpResponse memory response = _response(bytes('{"positions":[],"limitOrders":[]}'));
-        AvantisPositionsResult memory result =
-            abi.decode(adapter.positionsCallback(response, abi.encode(account)), (AvantisPositionsResult));
+        bytes32 parametersHash = keccak256(abi.encode(account));
+        AvantisPositionsBody memory projected =
+            AvantisPositionsBody({trades: _projectedTrades(account), orders: new AvantisOrderInfo[](0)});
+        HttpResponse memory response = _projectedResponse(abi.encode(projected));
+        AvantisPositionsResult memory result = abi.decode(
+            adapter.externalQueryCallback(response, abi.encode(adapter.POSITIONS_QUERY(), account, parametersHash)),
+            (AvantisPositionsResult)
+        );
         require(result.account == account, "wrong account");
-        require(result.status == 200, "wrong status");
-        require(keccak256(result.body) == keccak256(response.body), "wrong body");
+        require(result.parametersHash == parametersHash, "wrong parameters");
+        require(result.trades.length == 1, "wrong trade count");
+        require(result.trades[0].trader == account, "wrong trade trader");
+        require(result.trades[0].collateralUsdc == 100e6, "wrong collateral");
+        require(result.orders.length == 0, "wrong order count");
+        require(keccak256(abi.encode(result.rawBodyHash)) == keccak256(abi.encode(response.rawBodyHash)), "wrong hash");
     }
 
-    function testOpenTradeCallbackReturnsValidatedCall() external view {
+    function testAccountQueryReturnsOnchainFundsAndAllowance() external view {
         address account = address(0xbeef);
-        AvantisOpenTradeParameters memory parameters = _parameters();
-        bytes memory callData = _callData(account, parameters);
-        PreparedAction memory prepared = adapter.openTradeCallback(
-            _transactionResponse(account, parameters.executionFeeWei, callData), abi.encode(account, parameters)
+        AvantisAccountState memory result =
+            abi.decode(adapter.query(adapter.ACCOUNT_QUERY(), abi.encode(account)), (AvantisAccountState));
+        require(result.account == account, "wrong account");
+        require(result.usdcBalance == 1_000_000e6, "wrong balance");
+        require(result.usdcAllowance == 0, "wrong allowance");
+        require(result.spender == adapter.TRADING_STORAGE(), "wrong spender");
+    }
+
+    function testTransactionCallbackReturnsApprovalAndValidatedOpen() external view {
+        address account = address(0xbeef);
+        AvantisOpenTradeParameters memory parameters = _openParameters();
+        bytes memory callData = _openCallData(account, parameters);
+        PreparedAction memory prepared = adapter.transactionCallback(
+            _transactionResponse(account, parameters.executionFeeWei, callData),
+            abi.encode(account, callData, parameters.executionFeeWei, parameters.collateralUsdc)
         );
 
         require(prepared.calls.length == 2, "expected approval and trade");
@@ -70,65 +104,95 @@ contract AvantisApplicationAdapterTest {
         require(prepared.validUntil == block.timestamp + adapter.PREPARATION_VALIDITY(), "wrong expiry");
     }
 
-    function testOpenTradeCallbackRejectsDifferentTrader() external view {
+    function testTransactionCallbackRejectsChangedCalldata() external view {
         address account = address(0xbeef);
-        AvantisOpenTradeParameters memory parameters = _parameters();
-        bytes memory callData = _callData(address(0xdead), parameters);
+        AvantisOpenTradeParameters memory parameters = _openParameters();
+        bytes memory expected = _openCallData(account, parameters);
+        parameters.takeProfit++;
+        bytes memory changed = _openCallData(account, parameters);
         (bool success,) = address(adapter)
             .staticcall(
                 abi.encodeCall(
-                    adapter.openTradeCallback,
+                    adapter.transactionCallback,
                     (
-                        _transactionResponse(account, parameters.executionFeeWei, callData),
-                        abi.encode(account, parameters)
+                        _transactionResponse(account, parameters.executionFeeWei, changed),
+                        abi.encode(account, expected, parameters.executionFeeWei, parameters.collateralUsdc)
                     )
                 )
             );
-        require(!success, "different trader should fail");
+        require(!success, "changed calldata should fail");
     }
 
-    function testOpenTradeCallbackRejectsDifferentValue() external view {
+    function testMarginCallbackValidatesDynamicOracleCalldata() external view {
         address account = address(0xbeef);
-        AvantisOpenTradeParameters memory parameters = _parameters();
-        (bool success,) = address(adapter)
-            .staticcall(
-                abi.encodeCall(
-                    adapter.openTradeCallback,
-                    (
-                        _transactionResponse(account, parameters.executionFeeWei + 1, _callData(account, parameters)),
-                        abi.encode(account, parameters)
-                    )
-                )
-            );
-        require(!success, "different value should fail");
+        AvantisMarginParameters memory parameters = AvantisMarginParameters({
+            pairIndex: 1,
+            tradeIndex: 2,
+            action: AvantisMarginAction.DEPOSIT,
+            collateralUsdc: 25e6,
+            priceSourcing: 1,
+            oracleFeeWei: 1
+        });
+        bytes[] memory updates = new bytes[](1);
+        updates[0] = hex"1234";
+        bytes memory callData = abi.encodeCall(
+            IAvantisTrading.updateMargin,
+            (
+                parameters.pairIndex,
+                parameters.tradeIndex,
+                uint8(parameters.action),
+                parameters.collateralUsdc,
+                updates,
+                parameters.priceSourcing
+            )
+        );
+        PreparedAction memory prepared = adapter.marginCallback(
+            _transactionResponse(account, parameters.oracleFeeWei, callData), abi.encode(account, parameters)
+        );
+        require(prepared.calls.length == 2, "expected approval and margin update");
+        require(prepared.calls[1].value == 1, "wrong oracle fee");
+        require(keccak256(prepared.calls[1].data) == keccak256(callData), "wrong margin calldata");
     }
 
-    function testRejectsInvalidTradeParameters() external view {
-        AvantisOpenTradeParameters memory parameters = _parameters();
-        parameters.slippagePercent = 0;
-        (bool success,) = address(adapter)
-            .staticcall(
-                abi.encodeCall(adapter.prepare, (adapter.OPEN_TRADE_ACTION(), address(0xbeef), abi.encode(parameters)))
-            );
-        require(!success, "zero slippage should fail");
+    function testDelegateActionsAreConstructedLocally() external view {
+        AvantisDelegateParameters memory parameters =
+            AvantisDelegateParameters({delegate: address(0xdead), expiry: uint64(block.timestamp + 1 days)});
+        PreparedAction memory setDelegate =
+            adapter.prepare(adapter.SET_DELEGATE_ACTION(), address(0xbeef), abi.encode(parameters));
+        require(setDelegate.calls.length == 1, "wrong set call count");
+        require(setDelegate.validUntil == parameters.expiry, "wrong delegate expiry");
+        require(
+            keccak256(setDelegate.calls[0].data)
+                == keccak256(abi.encodeCall(IAvantisTrading.setDelegate, (parameters.delegate, parameters.expiry))),
+            "wrong set calldata"
+        );
+
+        PreparedAction memory removeDelegate =
+            adapter.prepare(adapter.REMOVE_DELEGATE_ACTION(), address(0xbeef), abi.encode(parameters.delegate));
+        require(removeDelegate.calls.length == 1, "wrong remove call count");
+        require(
+            keccak256(removeDelegate.calls[0].data)
+                == keccak256(abi.encodeCall(IAvantisTrading.removeDelegate, (parameters.delegate))),
+            "wrong remove calldata"
+        );
     }
 
-    function _parameters() private pure returns (AvantisOpenTradeParameters memory) {
+    function _openParameters() private pure returns (AvantisOpenTradeParameters memory) {
         return AvantisOpenTradeParameters({
             pairIndex: 0,
             isLong: true,
             orderType: AvantisOrderType.LIMIT,
-            collateralUsdc: 100_000_000,
+            collateralUsdc: 100e6,
             leverage: 10 * 1e10,
             slippagePercent: 1e10,
-            openPrice: 100_000 * 1e10,
-            takeProfit: 120_000 * 1e10,
-            stopLoss: 90_000 * 1e10,
+            openPrice: 4_000 * 1e10,
+            takeProfit: 5_000 * 1e10,
+            stopLoss: 3_000 * 1e10,
             executionFeeWei: 350_000_000_000_000
         });
     }
 
-    function _callData(address account, AvantisOpenTradeParameters memory parameters)
+    function _openCallData(address account, AvantisOpenTradeParameters memory parameters)
         private
         pure
         returns (bytes memory)
@@ -155,22 +219,52 @@ contract AvantisApplicationAdapterTest {
         pure
         returns (HttpResponse memory)
     {
-        return _response(
-            abi.encodePacked(
-                '{"ok":true,"data":{"to":"0x44914408af82bc9983bbb330e3578e1105e11d4e","from":"',
-                _addressString(account),
-                '","data":"',
-                _hexString(callData),
-                '","value":"0x',
-                _uintHex(value),
-                '","chainId":8453,"description":"test"}}'
-            )
-        );
+        AvantisTransaction memory transaction = AvantisTransaction({
+            chainId: 8453,
+            to: 0x44914408af82bC9983bbb330e3578E1105e11d4e,
+            from: account,
+            value: value,
+            callData: callData
+        });
+        return _projectedResponse(abi.encode(transaction));
+    }
+
+    function _projectedResponse(bytes memory encoded) private pure returns (HttpResponse memory) {
+        HttpHeader[] memory headers = new HttpHeader[](0);
+        return HttpResponse({
+            status: 200,
+            headers: headers,
+            rawBodyHash: keccak256(encoded),
+            bodyEncoding: ResponseBodyEncoding.JSON_ABI,
+            body: encoded
+        });
+    }
+
+    function _projectedTrades(address account) private pure returns (AvantisTradeInfo[] memory trades) {
+        trades = new AvantisTradeInfo[](1);
+        trades[0] = AvantisTradeInfo({
+            trader: account,
+            pairIndex: 0,
+            tradeIndex: 0,
+            collateralUsdc: 100e6,
+            openPrice: 40_000 * 1e10,
+            isLong: true,
+            leverage: 10 * 1e10,
+            takeProfit: 50_000 * 1e10,
+            stopLoss: 30_000 * 1e10,
+            liquidationPrice: 35_000 * 1e10
+        });
     }
 
     function _response(bytes memory body) private pure returns (HttpResponse memory) {
         HttpHeader[] memory headers = new HttpHeader[](0);
-        return HttpResponse({status: 200, headers: headers, body: body});
+        return HttpResponse({
+            status: 200,
+            headers: headers,
+            rawBodyHash: keccak256(body),
+            bodyEncoding: ResponseBodyEncoding.RAW,
+            body: body
+        });
     }
 
     function _addressString(address account) private pure returns (string memory) {

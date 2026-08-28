@@ -1,4 +1,4 @@
-import { bytesToHex, hexToBytes } from "viem";
+import { bytesToHex, hexToBytes, keccak256 } from "viem";
 
 import type {
   CompletedHttpRequest,
@@ -234,12 +234,15 @@ export async function executeHttpRequest(parameters: {
     throw new Error(`HTTP response exceeds ${maxResponseBytes} bytes`);
   }
 
+  const bodyHex = bytesToHex(body);
   return {
     status: response.status,
     headers: [...response.headers.entries()].map(([name, value]) => ({
       name,
       value,
     })),
-    body: bytesToHex(body),
+    rawBodyHash: keccak256(bodyHex),
+    bodyEncoding: "RAW",
+    body: bodyHex,
   };
 }

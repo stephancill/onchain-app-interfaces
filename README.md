@@ -24,7 +24,7 @@ Reference adapters live in `contracts/adapters/`:
 - a recursive [KyberSwap quote/build adapter](docs/adapters/kyberswap.md);
 - an authenticated [OpenSea stats/public-mint adapter](docs/adapters/opensea.md);
 - a query-only [Bitrefill catalog adapter](docs/adapters/bitrefill.md);
-- a hybrid [Avantis positions/open-trade adapter](docs/adapters/avantis.md) with validated tx-builder calldata.
+- a comprehensive hybrid [Avantis markets and position-management adapter](docs/adapters/avantis.md) with validated tx-builder calldata.
 
 Cross-application evidence and proposed standards changes are consolidated in [`docs/prototype-findings.md`](docs/prototype-findings.md).
 

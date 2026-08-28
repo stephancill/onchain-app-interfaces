@@ -7,8 +7,11 @@ import {
     HttpHeader,
     HttpRequest,
     HttpResponse,
+    JsonAbiNode,
     RequestLocation,
-    RequestRequirement
+    RequestRequirement,
+    ResponseTransform,
+    ResponseTransformKind
 } from "../IExternalRequest.sol";
 import {Text} from "../lib/Text.sol";
 
@@ -109,6 +112,7 @@ contract BitrefillApplicationAdapter is IApplicationQueries {
                 body: bytes(""),
                 requirements: requirements
             }),
+            responseTransform: _rawTransform(),
             callbackFunction: this.catalogCallback.selector,
             extraData: abi.encode(queryId, keccak256(parameters))
         });
@@ -197,5 +201,10 @@ contract BitrefillApplicationAdapter is IApplicationQueries {
             if (character >= 65 && character <= 90) normalized[i] = bytes1(character + 32);
         }
         return keccak256(normalized);
+    }
+
+    function _rawTransform() private pure returns (ResponseTransform memory transform) {
+        JsonAbiNode[] memory nodes = new JsonAbiNode[](0);
+        transform = ResponseTransform({kind: ResponseTransformKind.RAW, statusFrom: 0, statusTo: 0, nodes: nodes});
     }
 }

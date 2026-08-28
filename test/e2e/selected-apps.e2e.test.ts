@@ -47,6 +47,11 @@ const seaDropMintAbi = parseAbi([
 ]);
 const avantisTradingAbi = parseAbi([
   "function openTrade((address trader,uint256 pairIndex,uint256 index,uint256 initialPosToken,uint256 positionSizeUSDC,uint256 openPrice,bool buy,uint256 leverage,uint256 tp,uint256 sl,uint256 timestamp) trade,uint8 orderType,uint256 slippagePercent) payable returns (uint256 orderId)",
+  "function closeTradeMarket(uint256 pairIndex,uint256 tradeIndex,uint256 collateralToClose,uint256 expectedPrice) payable",
+  "function cancelOpenLimitOrder(uint256 pairIndex,uint256 orderIndex)",
+  "function updateOpenLimitOrder(uint256 pairIndex,uint256 orderIndex,uint256 price,uint256 slippagePercent,uint256 takeProfit,uint256 stopLoss)",
+  "function increasePositionSize((address trader,uint256 pairIndex,uint256 index,uint256 openPrice,uint256 additionalCollateralUsdc,uint256 leverage) request,uint256 slippagePercent)",
+  "function updateMargin(uint256 pairIndex,uint256 tradeIndex,uint8 action,uint256 collateralUsdc,bytes[] priceUpdateData,uint8 priceSourcing) payable",
 ]);
 
 const testPrivateKey =
@@ -271,17 +276,42 @@ function startServer(certificate: { key: string; cert: string }) {
       if (url.pathname.startsWith("/v1/health/")) {
         return Response.json({ success: true, data: { healthFactor: 2.5 } });
       }
-      if (url.pathname === "/user-data") {
+      if (url.pathname === "/v2/positions") {
+        const trader = url.searchParams.get("trader") as Address;
         return Response.json({
-          positions: [
-            {
-              trader: url.searchParams.get("trader"),
-              pairIndex: 0,
-              index: 0,
-              buy: true,
-            },
-          ],
-          limitOrders: [],
+          ok: true,
+          data: {
+            trader,
+            trades: [
+              {
+                trade: {
+                  trader,
+                  pairIndex: "0",
+                  index: "0",
+                  initialPosToken: "0",
+                  positionSizeUSDC: "100000000",
+                  openPrice: "40000000000000",
+                  buy: true,
+                  leverage: "100000000000",
+                  tp: "50000000000000",
+                  sl: "30000000000000",
+                  timestamp: "0",
+                },
+                tradeInfo: {
+                  openInterestUSDC: "1000000000",
+                  tpLastUpdated: "0",
+                  slLastUpdated: "0",
+                  beingMarketClosed: false,
+                  lossProtection: "0",
+                },
+                rolloverFee: "0",
+                liquidationPrice: "35000000000000",
+                isPnl: false,
+                coinExposure: "0",
+              },
+            ],
+            orders: [],
+          },
         });
       }
       if (url.pathname === "/v2/trade/open") {
@@ -331,6 +361,140 @@ function startServer(certificate: { key: string; cert: string }) {
             value: `0x${BigInt(url.searchParams.get("executionFeeWei") ?? "0").toString(16)}`,
             chainId: 8453,
             description: "fixture trade",
+          },
+        });
+      }
+      if (url.pathname === "/v2/trade/close") {
+        const trader = url.searchParams.get("trader") as Address;
+        return Response.json({
+          ok: true,
+          data: {
+            to: avantisTrading,
+            from: trader,
+            data: encodeFunctionData({
+              abi: avantisTradingAbi,
+              functionName: "closeTradeMarket",
+              args: [
+                BigInt(url.searchParams.get("pairIndex") ?? "0"),
+                BigInt(url.searchParams.get("tradeIndex") ?? "0"),
+                parseUnits(
+                  url.searchParams.get("collateralToCloseUsdc") ?? "0",
+                  6,
+                ),
+                parseUnits(url.searchParams.get("expectedPrice") ?? "0", 10),
+              ],
+            }),
+            value: `0x${BigInt(url.searchParams.get("executionFeeWei") ?? "0").toString(16)}`,
+            chainId: 8453,
+            description: "fixture close",
+          },
+        });
+      }
+      if (url.pathname === "/v2/limit/cancel") {
+        const trader = url.searchParams.get("trader") as Address;
+        return Response.json({
+          ok: true,
+          data: {
+            to: avantisTrading,
+            from: trader,
+            data: encodeFunctionData({
+              abi: avantisTradingAbi,
+              functionName: "cancelOpenLimitOrder",
+              args: [
+                BigInt(url.searchParams.get("pairIndex") ?? "0"),
+                BigInt(url.searchParams.get("orderIndex") ?? "0"),
+              ],
+            }),
+            value: "0x0",
+            chainId: 8453,
+            description: "fixture cancel",
+          },
+        });
+      }
+      if (url.pathname === "/v2/limit/update") {
+        const trader = url.searchParams.get("trader") as Address;
+        return Response.json({
+          ok: true,
+          data: {
+            to: avantisTrading,
+            from: trader,
+            data: encodeFunctionData({
+              abi: avantisTradingAbi,
+              functionName: "updateOpenLimitOrder",
+              args: [
+                BigInt(url.searchParams.get("pairIndex") ?? "0"),
+                BigInt(url.searchParams.get("orderIndex") ?? "0"),
+                parseUnits(url.searchParams.get("price") ?? "0", 10),
+                parseUnits(url.searchParams.get("slippagePercent") ?? "0", 10),
+                parseUnits(url.searchParams.get("takeProfit") ?? "0", 10),
+                parseUnits(url.searchParams.get("stopLoss") ?? "0", 10),
+              ],
+            }),
+            value: "0x0",
+            chainId: 8453,
+            description: "fixture limit update",
+          },
+        });
+      }
+      if (url.pathname === "/v2/position/increase") {
+        const trader = url.searchParams.get("trader") as Address;
+        return Response.json({
+          ok: true,
+          data: {
+            to: avantisTrading,
+            from: trader,
+            data: encodeFunctionData({
+              abi: avantisTradingAbi,
+              functionName: "increasePositionSize",
+              args: [
+                {
+                  trader,
+                  pairIndex: BigInt(url.searchParams.get("pairIndex") ?? "0"),
+                  index: BigInt(url.searchParams.get("tradeIndex") ?? "0"),
+                  openPrice: parseUnits(
+                    url.searchParams.get("openPrice") ?? "0",
+                    10,
+                  ),
+                  additionalCollateralUsdc: parseUnits(
+                    url.searchParams.get("additionalCollateralUsdc") ?? "0",
+                    6,
+                  ),
+                  leverage: parseUnits(
+                    url.searchParams.get("leverage") ?? "0",
+                    10,
+                  ),
+                },
+                parseUnits(url.searchParams.get("slippagePercent") ?? "0", 10),
+              ],
+            }),
+            value: "0x0",
+            chainId: 8453,
+            description: "fixture increase",
+          },
+        });
+      }
+      if (url.pathname === "/v2/margin/update") {
+        const trader = url.searchParams.get("trader") as Address;
+        return Response.json({
+          ok: true,
+          data: {
+            to: avantisTrading,
+            from: trader,
+            data: encodeFunctionData({
+              abi: avantisTradingAbi,
+              functionName: "updateMargin",
+              args: [
+                BigInt(url.searchParams.get("pairIndex") ?? "0"),
+                BigInt(url.searchParams.get("tradeIndex") ?? "0"),
+                url.searchParams.get("action") === "deposit" ? 0 : 1,
+                parseUnits(url.searchParams.get("collateralUsdc") ?? "0", 6),
+                ["0x1234"],
+                Number(url.searchParams.get("priceSourcing") ?? "0"),
+              ],
+            }),
+            value: `0x${BigInt(url.searchParams.get("oracleFeeWei") ?? "0").toString(16)}`,
+            chainId: 8453,
+            description: "fixture margin",
           },
         });
       }
@@ -559,7 +723,7 @@ beforeAll(async () => {
     publicClient,
     abi: avantisAbi,
     bytecode: avantis.bytecode.object as Hex,
-    args: [serviceOrigin, serviceOrigin],
+    args: [serviceOrigin],
   });
 }, 30_000);
 
@@ -612,8 +776,29 @@ describe("selected application adapters", () => {
         "moonwell.supply.usdc",
       ],
       [kyberAddress, kyberAbi, "actionDescriptor", "kyberswap.swap.exactInput"],
+      [avantisAddress, avantisAbi, "queryDescriptor", "avantis.meta"],
+      [avantisAddress, avantisAbi, "queryDescriptor", "avantis.markets"],
+      [avantisAddress, avantisAbi, "queryDescriptor", "avantis.market"],
       [avantisAddress, avantisAbi, "queryDescriptor", "avantis.positions"],
+      [avantisAddress, avantisAbi, "queryDescriptor", "avantis.account"],
       [avantisAddress, avantisAbi, "actionDescriptor", "avantis.trade.open"],
+      [avantisAddress, avantisAbi, "actionDescriptor", "avantis.trade.close"],
+      [avantisAddress, avantisAbi, "actionDescriptor", "avantis.limit.cancel"],
+      [avantisAddress, avantisAbi, "actionDescriptor", "avantis.limit.update"],
+      [
+        avantisAddress,
+        avantisAbi,
+        "actionDescriptor",
+        "avantis.position.increase",
+      ],
+      [avantisAddress, avantisAbi, "actionDescriptor", "avantis.margin.update"],
+      [avantisAddress, avantisAbi, "actionDescriptor", "avantis.delegate.set"],
+      [
+        avantisAddress,
+        avantisAbi,
+        "actionDescriptor",
+        "avantis.delegate.remove",
+      ],
       [
         openSeaAddress,
         openSeaAbi,
@@ -946,11 +1131,33 @@ describe("selected application adapters", () => {
     const positions = decodeDescriptorResult({
       descriptor: positionsDescriptor,
       data: positionsResult,
-    }).result as { account: Address; body: Hex };
+    }).result as {
+      account: Address;
+      parametersHash: Hex;
+      rawBodyHash: Hex;
+      trades: {
+        trader: Address;
+        pairIndex: bigint;
+        tradeIndex: bigint;
+        collateralUsdc: bigint;
+        openPrice: bigint;
+        isLong: boolean;
+        leverage: bigint;
+        takeProfit: bigint;
+        stopLoss: bigint;
+        liquidationPrice: bigint;
+      }[];
+      orders: unknown[];
+    };
     expect(positions.account.toLowerCase()).toBe(account.address.toLowerCase());
-    expect(
-      new TextDecoder().decode(Buffer.from(positions.body.slice(2), "hex")),
-    ).toContain("positions");
+    expect(positions.trades).toHaveLength(1);
+    expect(positions.trades[0]?.trader.toLowerCase()).toBe(
+      account.address.toLowerCase(),
+    );
+    expect(positions.trades[0]?.isLong).toBe(true);
+    expect(positions.trades[0]?.collateralUsdc).toBe(100_000_000n);
+    expect(positions.orders).toHaveLength(0);
+    expect(positions.rawBodyHash).toMatch(/^0x[0-9a-fA-F]{64}$/);
 
     const actionId = keccak256(stringToHex("avantis.trade.open"));
     const actionDescriptor = await loadDescriptor({
@@ -998,5 +1205,101 @@ describe("selected application adapters", () => {
     );
     expect(prepared.calls[1]?.value).toBe(350_000_000_000_000n);
     expect(prepared.validUntil).toBeGreaterThan(0n);
+
+    for (const candidate of [
+      {
+        name: "avantis.trade.close",
+        values: {
+          parameters: {
+            pairIndex: 0,
+            tradeIndex: 0,
+            collateralToCloseUsdc: 50_000_000n,
+            expectedPrice: 40_000_000_000_000n,
+            executionFeeWei: 350_000_000_000_000n,
+          },
+        },
+        callCount: 1,
+      },
+      {
+        name: "avantis.limit.cancel",
+        values: { parameters: { pairIndex: 0, orderIndex: 1 } },
+        callCount: 1,
+      },
+      {
+        name: "avantis.limit.update",
+        values: {
+          parameters: {
+            pairIndex: 0,
+            orderIndex: 1,
+            price: 40_000_000_000_000n,
+            slippagePercent: 10_000_000_000n,
+            takeProfit: 50_000_000_000_000n,
+            stopLoss: 30_000_000_000_000n,
+          },
+        },
+        callCount: 1,
+      },
+      {
+        name: "avantis.position.increase",
+        values: {
+          parameters: {
+            pairIndex: 0,
+            tradeIndex: 0,
+            additionalCollateralUsdc: 25_000_000n,
+            leverage: 100_000_000_000n,
+            openPrice: 40_000_000_000_000n,
+            slippagePercent: 10_000_000_000n,
+          },
+        },
+        callCount: 2,
+      },
+      {
+        name: "avantis.margin.update",
+        values: {
+          parameters: {
+            pairIndex: 0,
+            tradeIndex: 0,
+            action: "DEPOSIT",
+            collateralUsdc: 25_000_000n,
+            priceSourcing: "PRO",
+            oracleFeeWei: 1n,
+          },
+        },
+        callCount: 2,
+      },
+    ]) {
+      const id = keccak256(stringToHex(candidate.name));
+      const descriptor = await loadDescriptor({
+        address: avantisAddress,
+        abi: avantisAbi,
+        functionName: "actionDescriptor",
+        id,
+      });
+      const management = (await resolve({
+        to: avantisAddress,
+        abi: avantisAbi,
+        functionName: "prepare",
+        data: encodeFunctionData({
+          abi: avantisAbi,
+          functionName: "prepare",
+          args: [
+            id,
+            account.address,
+            encodeDescriptorParameters({
+              descriptor,
+              values: candidate.values,
+            }),
+          ],
+        }),
+      })) as {
+        calls: readonly { target: Address; value: bigint; data: Hex }[];
+        validUntil: bigint;
+      };
+      expect(management.calls).toHaveLength(candidate.callCount);
+      expect(management.calls.at(-1)?.target.toLowerCase()).toBe(
+        avantisTrading.toLowerCase(),
+      );
+      expect(management.validUntil).toBeGreaterThan(0n);
+    }
   });
 });

@@ -6,8 +6,11 @@ import {
     HttpHeader,
     HttpRequest,
     HttpResponse,
+    JsonAbiNode,
     RequestLocation,
-    RequestRequirement
+    RequestRequirement,
+    ResponseTransform,
+    ResponseTransformKind
 } from "../contracts/IExternalRequest.sol";
 
 contract ExternalRequestFixture {
@@ -38,6 +41,7 @@ contract ExternalRequestFixture {
                 body: bytes('{"asset":"ETH"}'),
                 requirements: requirements
             }),
+            responseTransform: _rawTransform(),
             callbackFunction: this.requestCallback.selector,
             extraData: abi.encode(uint256(42))
         });
@@ -82,8 +86,14 @@ contract ExternalRequestFixture {
                 body: bytes(""),
                 requirements: requirements
             }),
+            responseTransform: _rawTransform(),
             callbackFunction: callbackFunction,
             extraData: extraData
         });
+    }
+
+    function _rawTransform() private pure returns (ResponseTransform memory transform) {
+        JsonAbiNode[] memory nodes = new JsonAbiNode[](0);
+        transform = ResponseTransform({kind: ResponseTransformKind.RAW, statusFrom: 0, statusTo: 0, nodes: nodes});
     }
 }

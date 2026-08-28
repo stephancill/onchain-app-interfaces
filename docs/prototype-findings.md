@@ -20,7 +20,7 @@ Text descriptors cannot let a generic client encode adapter structs, decode ABI 
 
 ### Prototype Result
 
-The v0.1 JSON profile in `spec/DESCRIPTORS.md` now describes all 15 capabilities across the six adapters. The TypeScript client:
+The v0.1 JSON profile in `spec/DESCRIPTORS.md` now describes all 26 capabilities across the six adapters. The TypeScript client:
 
 - validates descriptors with Zod;
 - rejects unknown versions, encodings, ABI types, duplicate fields, and malformed constraints;
@@ -103,13 +103,15 @@ The prototype's `Json` library is deliberately narrow: bounded top-level field l
 
 ### Proposed Solution
 
-Do not standardize an onchain JSON parser. Encourage application APIs or normalization gateways to offer one of:
+Do not standardize an onchain JSON parser. Implemented response projections in the continuation client remove the need for it: an adapter declares a `ResponseTransform` projection tree and receives a strictly coerced ABI body directly in the callback. This cut Avantis callback gas from millions to tens of thousands of simulated units while keeping semantic validation onchain.
+
+Remaining alternatives for authenticated data:
 
 - ABI-encoded responses;
 - canonical CBOR with a constrained schema;
 - signed typed payloads whose signer and domain are verified by callbacks.
 
-External Request should continue delivering response bytes and media metadata. Response interpretation belongs to application callbacks and descriptors.
+External Request still delivers raw response bytes and the raw-body hash for opaque bodies and non-2xx statuses. Response interpretation belongs to application callbacks and descriptors.
 
 ## 6. Recursive Continuations Work
 

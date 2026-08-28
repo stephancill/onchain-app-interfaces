@@ -55,7 +55,7 @@ An ABI field contains:
 - `sensitivity`: optional `public`, `private`, or `bearer-secret` label;
 - `enumValues`: optional mapping from semantic labels to integer values.
 
-v0.1 supports the ABI types exercised by the reference adapters: addresses, booleans, strings, bytes, fixed bytes, integers, and nested tuples. Arrays are deferred.
+v0.1 supports the ABI types exercised by the reference adapters: addresses, booleans, strings, bytes, fixed bytes, integers, nested tuples, and dynamic arrays of tuples and scalars using `[]` suffixes (for example `tuple[]` or `uint256[]`). Fixed-size arrays are deferred.
 
 Clients MUST treat `pattern` as a profile-defined constraint rather than execute arbitrary regular expressions from untrusted descriptors. The reference client supports only the bounded ASCII slug patterns used by the prototype adapters.
 
@@ -127,7 +127,7 @@ Sensitive result fields MUST be handled according to local client policy. Descri
 
 - Canonical JSON serialization and descriptor hashing.
 - Content-addressed or URI-based descriptors.
-- Arrays and richer algebraic schemas.
+- Fixed-size arrays and richer algebraic schemas.
 - Cross-field and state-dependent constraints.
 - Standard effect and warning taxonomies.
 - Localization and user-facing rendering.

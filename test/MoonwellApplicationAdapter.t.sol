@@ -2,7 +2,7 @@
 pragma solidity ^0.8.30;
 
 import {Call, PreparedAction} from "../contracts/IApplicationActions.sol";
-import {HttpHeader, HttpResponse} from "../contracts/IExternalRequest.sol";
+import {HttpHeader, HttpResponse, ResponseBodyEncoding} from "../contracts/IExternalRequest.sol";
 import {
     IMoonwellErc20,
     MoonwellApplicationAdapter,
@@ -40,7 +40,13 @@ contract MoonwellApplicationAdapterTest {
     function testExternalCallbackBindsQueryAndAccount() external view {
         address account = address(0xbeef);
         HttpHeader[] memory headers = new HttpHeader[](0);
-        HttpResponse memory response = HttpResponse({status: 200, headers: headers, body: bytes('{"success":true}')});
+        HttpResponse memory response = HttpResponse({
+            status: 200,
+            headers: headers,
+            rawBodyHash: keccak256(bytes('{"success":true}')),
+            bodyEncoding: ResponseBodyEncoding.RAW,
+            body: bytes('{"success":true}')
+        });
         MoonwellExternalQueryResult memory result = abi.decode(
             adapter.externalQueryCallback(response, abi.encode(adapter.HEALTH_QUERY(), account)),
             (MoonwellExternalQueryResult)
@@ -54,7 +60,13 @@ contract MoonwellApplicationAdapterTest {
 
     function testExternalCallbackRejectsHttpError() external view {
         HttpHeader[] memory headers = new HttpHeader[](0);
-        HttpResponse memory response = HttpResponse({status: 500, headers: headers, body: bytes("failure")});
+        HttpResponse memory response = HttpResponse({
+            status: 500,
+            headers: headers,
+            rawBodyHash: keccak256(bytes("failure")),
+            bodyEncoding: ResponseBodyEncoding.RAW,
+            body: bytes("failure")
+        });
         (bool success,) = address(adapter)
             .staticcall(
                 abi.encodeCall(

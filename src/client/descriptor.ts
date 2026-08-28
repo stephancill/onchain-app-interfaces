@@ -54,13 +54,15 @@ const descriptorFieldSchema: z.ZodType<DescriptorField> = z.lazy(() =>
     })
     .strict()
     .superRefine((field, context) => {
-      if (field.abiType === "tuple" && field.components === undefined) {
+      const core = field.abiType.split("[]")[0] ?? field.abiType;
+      const isTuple = core === "tuple";
+      if (isTuple && field.components === undefined) {
         context.addIssue({
           code: "custom",
           message: "Tuple fields require components",
         });
       }
-      if (field.abiType !== "tuple" && field.components !== undefined) {
+      if (!isTuple && field.components !== undefined) {
         context.addIssue({
           code: "custom",
           message: "Only tuple fields may have components",
@@ -167,11 +169,16 @@ export type QueryDescriptor = z.infer<typeof queryDescriptorSchema>;
 export type ActionDescriptor = z.infer<typeof actionDescriptorSchema>;
 
 const supportedAbiType =
-  /^(address|bool|string|bytes|bytes(?:[1-9]|[12][0-9]|3[0-2])|u?int(?:8|16|24|32|40|48|56|64|72|80|88|96|104|112|120|128|136|144|152|160|168|176|184|192|200|208|216|224|232|240|248|256)?)$/;
+  /^(address|bool|string|bytes|bytes(?:[1-9]|[12][0-9]|3[0-2])|u?int(?:8|16|24|32|40|48|56|64|72|80|88|96|104|112|120|128|136|144|152|160|168|176|184|192|200|208|216|224|232|240|248|256)?)(\[\])*$/;
+
+function coreAbiType(field: DescriptorField): string {
+  const first = field.abiType.split("[]")[0];
+  return first === undefined ? field.abiType : first;
+}
 
 function validateAbiTypes(fields: readonly DescriptorField[]): void {
   for (const field of fields) {
-    if (field.abiType === "tuple") {
+    if (coreAbiType(field) === "tuple") {
       validateAbiTypes(field.components ?? []);
     } else if (!supportedAbiType.test(field.abiType)) {
       throw new Error(`Unsupported descriptor ABI type: ${field.abiType}`);
@@ -195,12 +202,14 @@ export function parseApplicationDescriptor(
 }
 
 function abiParameter(field: DescriptorField): AbiParameter {
-  if (field.abiType === "tuple") {
+  const core = coreAbiType(field);
+  const arraySuffix = field.abiType.slice(core.length);
+  if (core === "tuple") {
     return {
       name: field.name,
-      type: "tuple",
+      type: `tuple${arraySuffix}`,
       components: (field.components ?? []).map(abiParameter),
-    };
+    } as AbiParameter;
   }
   return { name: field.name, type: field.abiType } as AbiParameter;
 }
@@ -233,17 +242,32 @@ function integerValue(field: DescriptorField, value: unknown): bigint {
 }
 
 function normalizeValue(field: DescriptorField, value: unknown): unknown {
-  if (field.abiType === "tuple") {
-    if (typeof value !== "object" || value === null || Array.isArray(value)) {
-      throw new Error(`Invalid tuple value for ${field.name}`);
+  const core = coreAbiType(field);
+  const arraySuffix = field.abiType.slice(core.length);
+
+  if (core === "tuple") {
+    const components = field.components ?? [];
+    const normalizeTuple = (candidate: unknown): unknown => {
+      if (
+        typeof candidate !== "object" ||
+        candidate === null ||
+        Array.isArray(candidate)
+      ) {
+        throw new Error(`Invalid tuple value for ${field.name}`);
+      }
+      const record = candidate as Record<string, unknown>;
+      return Object.fromEntries(
+        components.map((component) => [
+          component.name,
+          normalizeValue(component, record[component.name]),
+        ]),
+      );
+    };
+    if (arraySuffix === "") return normalizeTuple(value);
+    if (arraySuffix === "[]" && Array.isArray(value)) {
+      return value.map(normalizeTuple);
     }
-    const record = value as Record<string, unknown>;
-    return Object.fromEntries(
-      (field.components ?? []).map((component) => [
-        component.name,
-        normalizeValue(component, record[component.name]),
-      ]),
-    );
+    throw new Error(`Unsupported tuple array shape for ${field.name}`);
   }
   if (/^u?int/.test(field.abiType)) return integerValue(field, value);
   if (field.abiType === "address") {
@@ -294,15 +318,22 @@ export function encodeDescriptorParameters(parameters: {
 }
 
 function namedDecodedValue(field: DescriptorField, value: unknown): unknown {
-  if (field.abiType !== "tuple") return value;
+  const core = coreAbiType(field);
+  const arraySuffix = field.abiType.slice(core.length);
+  if (core !== "tuple") return value;
   const components = field.components ?? [];
-  const record = value as Record<string, unknown> & readonly unknown[];
-  return Object.fromEntries(
-    components.map((component, index) => [
-      component.name,
-      namedDecodedValue(component, record[component.name] ?? record[index]),
-    ]),
-  );
+  const nameTuple = (candidate: unknown): unknown => {
+    const record = candidate as Record<string, unknown> & readonly unknown[];
+    return Object.fromEntries(
+      components.map((component, index) => [
+        component.name,
+        namedDecodedValue(component, record[component.name] ?? record[index]),
+      ]),
+    );
+  };
+  if (arraySuffix === "") return nameTuple(value);
+  if (arraySuffix === "[]" && Array.isArray(value)) return value.map(nameTuple);
+  return value;
 }
 
 export function decodeDescriptorResult(parameters: {

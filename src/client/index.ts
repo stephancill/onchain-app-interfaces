@@ -10,6 +10,8 @@ export {
   validateRequest,
 } from "./request.ts";
 export { resolveCall } from "./resolve.ts";
+export { transformHttpResponse } from "./transform.ts";
+export type { ResponseBodyEncoding } from "./transform.ts";
 export {
   applicationDescriptorSchema,
   decodeDescriptorResult,

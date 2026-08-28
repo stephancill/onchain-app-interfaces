@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: CC0-1.0
 pragma solidity ^0.8.30;
 
-import {HttpHeader, HttpResponse} from "../contracts/IExternalRequest.sol";
+import {HttpHeader, HttpResponse, ResponseBodyEncoding} from "../contracts/IExternalRequest.sol";
 import {
     BitrefillApplicationAdapter,
     BitrefillCatalogResult,
@@ -82,7 +82,13 @@ contract SelectedAppsTest {
     function testBitrefillCallbackValidatesJsonMediaType() external view {
         HttpHeader[] memory headers = new HttpHeader[](1);
         headers[0] = HttpHeader({name: "CONTENT-TYPE", value: "Application/JSON; charset=utf-8"});
-        HttpResponse memory response = HttpResponse({status: 200, headers: headers, body: bytes('{"products":[]}')});
+        HttpResponse memory response = HttpResponse({
+            status: 200,
+            headers: headers,
+            rawBodyHash: keccak256(bytes('{"products":[]}')),
+            bodyEncoding: ResponseBodyEncoding.RAW,
+            body: bytes('{"products":[]}')
+        });
         bytes32 parametersHash = keccak256("parameters");
         BitrefillCatalogResult memory result = abi.decode(
             bitrefill.catalogCallback(response, abi.encode(bitrefill.SEARCH_QUERY(), parametersHash)),

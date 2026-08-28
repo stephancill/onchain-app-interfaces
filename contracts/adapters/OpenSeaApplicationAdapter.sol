@@ -8,8 +8,11 @@ import {
     HttpHeader,
     HttpRequest,
     HttpResponse,
+    JsonAbiNode,
     RequestLocation,
-    RequestRequirement
+    RequestRequirement,
+    ResponseTransform,
+    ResponseTransformKind
 } from "../IExternalRequest.sol";
 import {Json} from "../lib/Json.sol";
 import {Text} from "../lib/Text.sol";
@@ -228,7 +231,16 @@ contract OpenSeaApplicationAdapter is IApplicationQueries, IApplicationActions {
 
     function _revertRequest(HttpRequest memory request, bytes4 callback, bytes memory extraData) private view {
         revert ExternalRequest({
-            sender: address(this), request: request, callbackFunction: callback, extraData: extraData
+            sender: address(this),
+            request: request,
+            responseTransform: _rawTransform(),
+            callbackFunction: callback,
+            extraData: extraData
         });
+    }
+
+    function _rawTransform() private pure returns (ResponseTransform memory transform) {
+        JsonAbiNode[] memory nodes = new JsonAbiNode[](0);
+        transform = ResponseTransform({kind: ResponseTransformKind.RAW, statusFrom: 0, statusTo: 0, nodes: nodes});
     }
 }

@@ -8,8 +8,11 @@ import {
     HttpHeader,
     HttpRequest,
     HttpResponse,
+    JsonAbiNode,
     RequestLocation,
-    RequestRequirement
+    RequestRequirement,
+    ResponseTransform,
+    ResponseTransformKind
 } from "../contracts/IExternalRequest.sol";
 
 contract ApplicationAdapterFixture is IApplicationQueries, IApplicationActions {
@@ -139,6 +142,7 @@ contract ApplicationAdapterFixture is IApplicationQueries, IApplicationActions {
                 body: bytes(""),
                 requirements: requirements
             }),
+            responseTransform: _rawTransform(),
             callbackFunction: this.queryBodyCallback.selector,
             extraData: bytes("final")
         });
@@ -186,6 +190,7 @@ contract ApplicationAdapterFixture is IApplicationQueries, IApplicationActions {
                 body: bytes('{"context":{}}'),
                 requirements: requirements
             }),
+            responseTransform: _rawTransform(),
             callbackFunction: callbackFunction,
             extraData: bytes("")
         });
@@ -203,6 +208,7 @@ contract ApplicationAdapterFixture is IApplicationQueries, IApplicationActions {
                 body: bytes(""),
                 requirements: requirements
             }),
+            responseTransform: _rawTransform(),
             callbackFunction: callbackFunction,
             extraData: extraData
         });
@@ -224,6 +230,7 @@ contract ApplicationAdapterFixture is IApplicationQueries, IApplicationActions {
                 body: bytes("asset=ETH"),
                 requirements: requirements
             }),
+            responseTransform: _rawTransform(),
             callbackFunction: this.queryBodyCallback.selector,
             extraData: bytes("")
         });
@@ -241,6 +248,7 @@ contract ApplicationAdapterFixture is IApplicationQueries, IApplicationActions {
                 body: bytes(""),
                 requirements: requirements
             }),
+            responseTransform: _rawTransform(),
             callbackFunction: this.queryBodyCallback.selector,
             extraData: bytes("")
         });
@@ -254,5 +262,10 @@ contract ApplicationAdapterFixture is IApplicationQueries, IApplicationActions {
         Call[] memory calls = new Call[](1);
         calls[0] = Call({target: target, value: 0, data: data});
         preparedAction = PreparedAction({calls: calls, validUntil: lifetime});
+    }
+
+    function _rawTransform() private pure returns (ResponseTransform memory transform) {
+        JsonAbiNode[] memory nodes = new JsonAbiNode[](0);
+        transform = ResponseTransform({kind: ResponseTransformKind.RAW, statusFrom: 0, statusTo: 0, nodes: nodes});
     }
 }

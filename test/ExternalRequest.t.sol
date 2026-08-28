@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: CC0-1.0
 pragma solidity ^0.8.30;
 
-import {ExternalRequest, HttpHeader, HttpResponse} from "../contracts/IExternalRequest.sol";
+import {ExternalRequest, HttpHeader, HttpResponse, ResponseBodyEncoding} from "../contracts/IExternalRequest.sol";
 import {ExternalRequestFixture} from "./ExternalRequestFixture.sol";
 
 contract ExternalRequestTest {
@@ -24,7 +24,13 @@ contract ExternalRequestTest {
     function testCallbackReceivesStructuredResponse() external view {
         HttpHeader[] memory headers = new HttpHeader[](1);
         headers[0] = HttpHeader({name: "Content-Type", value: "application/json"});
-        HttpResponse memory response = HttpResponse({status: 200, headers: headers, body: bytes("ok")});
+        HttpResponse memory response = HttpResponse({
+            status: 200,
+            headers: headers,
+            rawBodyHash: keccak256(bytes("ok")),
+            bodyEncoding: ResponseBodyEncoding.RAW,
+            body: bytes("ok")
+        });
 
         bytes memory result = fixture.requestCallback(response, abi.encode(uint256(42)));
         (uint256 continuation, bytes memory body) = abi.decode(result, (uint256, bytes));
