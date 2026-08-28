@@ -11,6 +11,10 @@ This repository develops experimental EVM standards for application-level semant
 - EVM interactions use viem.
 - Runtime input and boundary validation uses Zod.
 
+## Deployment
+
+- The web console is deployed to Cloudflare Pages and is reachable at https://onchain-app-interfaces.pages.dev/ (the project's Pages worker).
+
 ## Working Agreements
 
 - Read the relevant files in `docs/` and `spec/` before changing an interface or its behavior.

@@ -4,6 +4,21 @@ This document records implementation findings that affect the experimental inter
 
 ## 2026-08-28
 
+- Fixed the web console's responsive layout after the Tailwind v4 migration. Three issues surfaced when tested in a browser across 375/768/900/1280/1920 px viewports:
+  - Horizontal page overflow in the two-column capability grid (0 px before, up to ~150 px at tablet widths after migration). The raw descriptor/result `<pre>` content forced the card's single auto grid track wider than its column because unbreakable JSON/AAB hex tokens set a large grid min-content. Fixed by giving the card's grid children `min-w-0` (`[&>*]:min-w-0`) and making `pre` wrap/break long lines (`white-space: pre-wrap`, `word-break: break-word`, `min-width: 0`) so the pre cannot inflate the track.
+  - The capability card summary row fragmented awkwardly at narrow widths (the truncated id and status dot wrapping to a second line because of a `justify-between`+`flex-1` spacer in a `flex-wrap` container). Replaced it with a two-part grid/flex summary: on mobile the kind badge, name, and chevron sit on one line with the status dot and id on the next; on `md:` and up it is a single justified flex row with a hidden duplicate chevron.
+  - The app filled only a fixed 1200 px centered column: `<main>` used `w-[min(1200px,calc(100%-2rem))]`, so on wide windows the app stayed pinned at 1200 px and resizing between ~1200 px and the full window width produced no visible change. Changed `<main>` to `w-full` with responsive `px-4 sm:px-6 lg:px-8` padding so the app now spans the full viewport and reflows live on resize.
+- Verified in the browser that `<main>` matches the viewport width at 600/900/1280/1920 px with no horizontal overflow, `document.scrollWidth === clientWidth` at every width, and the capability grid still collapses to a single column below the `md:` breakpoint. Current verification: web `bun run check` passes.
+
+## 2026-08-28
+
+- Migrated the interactive web console in `web/` (Vite, React, wagmi) to Tailwind CSS v4 for its responsive layout and component styling.
+- Added the `@tailwindcss/vite` plugin and wired it into `vite.config.ts`; `index.css` is now a Tailwind entry that imports Tailwind plus minimal base-layer rules for form controls, page height, links, and wrapping.
+- Replaced every ad-hoc class in `App.tsx` with Tailwind utility classes, preserving the prior behavior: the two-column query/action capability grid and the four-column target form collapse via `max-md:` breakpoints, and expandable capability cards use the `group-open:` variant with a `group` class on `<details>` to rotate the summary chevron.
+- Verified the production build emits the expected `::-webkit-details-marker` override and all responsive/grid/`max-md:` variants. Current verification: web `bun run check` (format, lint, typecheck, build) passes.
+
+## 2026-08-28
+
 - Expanded the Avantis adapter from one query and one action to five queries and eight actions covering metadata, markets, account state, positions, opening, closing, pending-order management, position increases, margin changes, and expiring delegates.
 - Migrated reads and transaction preparation to the live Avantis v2 tx-builder surface. The Base MCP plugin v0.2 still documents several removed unversioned routes and older position response shapes.
 - Required byte-for-byte calldata equality for deterministic builder actions. Margin updates instead validate every semantic field and canonical encoding while accepting fresh Pyth update bytes that the protocol verifies onchain.

@@ -382,8 +382,8 @@ function EditorField(parameters: {
   if (core === "tuple") {
     const record = (value ?? {}) as Record<string, unknown>;
     return (
-      <fieldset className="editor-group">
-        <legend>{field.name}</legend>
+      <fieldset className="rounded border border-current px-2.5 pt-2 pb-2.5">
+        <legend className="px-1 font-semibold">{field.name}</legend>
         <EditorFields
           fields={field.components ?? []}
           values={record}
@@ -396,7 +396,7 @@ function EditorField(parameters: {
 
   if (field.abiType === "bool") {
     return (
-      <label className="editor-field editor-bool">
+      <label className="flex items-center gap-2">
         <input
           type="checkbox"
           checked={value === true}
@@ -412,10 +412,15 @@ function EditorField(parameters: {
     const current =
       typeof value === "string" && labels.includes(value) ? value : "";
     return (
-      <label className="editor-field">
+      <label className="grid gap-1">
         <span>
           {field.name}
-          {fieldHint(field) && <em> {fieldHint(field)}</em>}
+          {fieldHint(field) && (
+            <em className="text-[0.85em] not-italic opacity-60">
+              {" "}
+              {fieldHint(field)}
+            </em>
+          )}
         </span>
         <select
           value={current}
@@ -433,10 +438,15 @@ function EditorField(parameters: {
 
   const validation = fieldValidation(field, value);
   return (
-    <label className="editor-field">
+    <label className="grid gap-1">
       <span>
         {field.name}
-        {fieldHint(field) && <em> {fieldHint(field)}</em>}
+        {fieldHint(field) && (
+          <em className="text-[0.85em] not-italic opacity-60">
+            {" "}
+            {fieldHint(field)}
+          </em>
+        )}
       </span>
       <input
         type="text"
@@ -453,7 +463,7 @@ function EditorField(parameters: {
         aria-invalid={validation !== undefined || undefined}
       />
       {validation !== undefined && (
-        <small className="error">{validation}</small>
+        <small className="text-[0.8em] text-red-600">{validation}</small>
       )}
     </label>
   );
@@ -467,7 +477,7 @@ function EditorFields(parameters: {
 }) {
   const { fields, values, account, onChange } = parameters;
   return (
-    <div className="editor-fields">
+    <div className="my-2 grid gap-2">
       {fields.map((field) => (
         <EditorField
           key={field.name}
@@ -730,50 +740,75 @@ function CapabilityCard(parameters: {
   }
 
   return (
-    <details className="capability-card">
-      <summary className="capability-summary">
-        <span className="capability-kind">{descriptor.kind}</span>
-        <span className="capability-name">{descriptor.name}</span>
-        <span className="capability-spacer" />
-        {mutation.isPending && (
-          <span className="capability-status pending" title="Resolving" />
-        )}
-        {mutation.error && (
-          <span className="capability-status error" title="Failed" />
-        )}
-        {mutation.data && (
-          <span className="capability-status ready" title="Completed" />
-        )}
-        <code title={capability.id}>
-          {capability.id.slice(0, 10)}...{capability.id.slice(-6)}
-        </code>
-        <span className="capability-chevron" aria-hidden="true">
-          ▸
+    <details className="group grid min-w-0 content-start self-start gap-3 border border-current p-4 [&>*]:min-w-0">
+      <summary className="grid cursor-pointer list-none select-none gap-2 [&::-webkit-details-marker]:hidden md:flex md:items-center md:justify-between md:gap-2.5">
+        <span className="flex min-w-0 items-center gap-2.5">
+          <span className="shrink-0 rounded-full border border-current px-2 py-0.5 text-[0.7em] tracking-[0.08em] uppercase">
+            {descriptor.kind}
+          </span>
+          <span className="min-w-0 flex-1 font-semibold">
+            {descriptor.name}
+          </span>
+          <span
+            className="shrink-0 opacity-70 transition-transform duration-150 group-open:rotate-90 md:hidden"
+            aria-hidden="true"
+          >
+            ▸
+          </span>
+        </span>
+        <span className="flex items-center gap-2.5">
+          {mutation.isPending && (
+            <span
+              className="h-2 w-2 shrink-0 rounded-full bg-amber-600"
+              title="Resolving"
+            />
+          )}
+          {mutation.error && (
+            <span
+              className="h-2 w-2 shrink-0 rounded-full bg-red-600"
+              title="Failed"
+            />
+          )}
+          {mutation.data && (
+            <span
+              className="h-2 w-2 shrink-0 rounded-full bg-green-600"
+              title="Completed"
+            />
+          )}
+          <code className="truncate md:whitespace-nowrap" title={capability.id}>
+            {capability.id.slice(0, 10)}...{capability.id.slice(-6)}
+          </code>
+          <span
+            className="hidden shrink-0 opacity-70 transition-transform duration-150 group-open:rotate-90 md:inline"
+            aria-hidden="true"
+          >
+            ▸
+          </span>
         </span>
       </summary>
       {descriptor.description && <p>{descriptor.description}</p>}
-      <dl className="metadata">
-        <div>
+      <dl className="flex flex-wrap gap-4 max-md:flex-col">
+        <div className="grid gap-1 border border-current p-2">
           <dt>Provenance</dt>
           <dd>{descriptor.provenance?.type ?? "not declared"}</dd>
         </div>
-        <div>
+        <div className="grid gap-1 border border-current p-2">
           <dt>Inputs</dt>
           <dd>{descriptor.inputs.fields.length}</dd>
         </div>
         {descriptor.kind === "action" && (
-          <div>
+          <div className="grid gap-1 border border-current p-2">
             <dt>Atomicity</dt>
             <dd>{descriptor.execution?.atomicity ?? "not declared"}</dd>
           </div>
         )}
       </dl>
       <details>
-        <summary>Descriptor</summary>
-        <pre>{jsonValue(descriptor)}</pre>
+        <summary className="cursor-pointer select-none">Descriptor</summary>
+        <pre className="max-h-80 overflow-auto">{jsonValue(descriptor)}</pre>
       </details>
       {descriptor.kind === "action" && (
-        <label>
+        <label className="grid gap-3">
           Preparation account
           <input
             value={actionAccount}
@@ -792,9 +827,13 @@ function CapabilityCard(parameters: {
           onChange={setEditorValues}
         />
       </div>
-      <details className="editor-json">
-        <summary>Encoded values (JSON)</summary>
-        <pre>{jsonValue(editorValues)}</pre>
+      <details>
+        <summary className="cursor-pointer select-none">
+          Encoded values (JSON)
+        </summary>
+        <pre className="max-h-60 overflow-auto text-[0.85em] opacity-90">
+          {jsonValue(editorValues)}
+        </pre>
       </details>
       <button
         type="button"
@@ -808,16 +847,18 @@ function CapabilityCard(parameters: {
             : "Prepare action"}
       </button>
       {mutation.error && (
-        <p className="error">{errorMessage(mutation.error)}</p>
+        <p className="text-red-600">{errorMessage(mutation.error)}</p>
       )}
       {mutation.data && (
-        <div className="result">
+        <div className="grid min-w-0 gap-2">
           <strong>
             {descriptor.kind === "query"
               ? "Semantic result"
               : "Prepared calls (not executed)"}
           </strong>
-          <pre>{jsonValue(mutation.data)}</pre>
+          <pre className="max-h-[360px] overflow-auto">
+            {jsonValue(mutation.data)}
+          </pre>
           {preparedAction !== undefined && (
             <>
               <button
@@ -837,13 +878,13 @@ function CapabilityCard(parameters: {
               </button>
               {executionBlockedReason && <p>{executionBlockedReason}</p>}
               {(executionError || sendCalls.error || callsStatus.error) && (
-                <p className="error">
+                <p className="text-red-600">
                   {executionError ??
                     errorMessage(sendCalls.error ?? callsStatus.error)}
                 </p>
               )}
               {sendCalls.data && (
-                <div>
+                <div className="grid gap-1">
                   <strong>Wallet bundle</strong>
                   <pre>
                     {jsonValue({
@@ -869,7 +910,7 @@ function WalletConnection() {
 
   if (connection.status === "connected") {
     return (
-      <div className="wallet">
+      <div className="flex flex-wrap items-center gap-4">
         <span>
           {connection.addresses[0]?.slice(0, 6)}...
           {connection.addresses[0]?.slice(-4)}
@@ -881,7 +922,7 @@ function WalletConnection() {
     );
   }
   return (
-    <div className="wallet">
+    <div className="flex flex-wrap items-center gap-4">
       {connectors.map((connector) => (
         <button
           key={connector.uid}
@@ -891,7 +932,7 @@ function WalletConnection() {
           Connect {connector.name}
         </button>
       ))}
-      {error && <span className="error">{error.message}</span>}
+      {error && <span className="text-red-600">{error.message}</span>}
     </div>
   );
 }
@@ -961,12 +1002,18 @@ function App() {
   }
 
   const loaded = interfaceQuery.data;
+  const columnClass = (full: boolean) =>
+    `grid min-w-0 content-start gap-3 ${
+      full ? "col-span-2 max-md:col-span-1" : ""
+    }`;
   return (
-    <main>
-      <header>
-        <div>
-          <p className="eyebrow">Experimental EVM interface</p>
-          <h1>Application Interface Console</h1>
+    <main className="grid w-full gap-4 px-4 pb-[max(64px,env(safe-area-inset-bottom))] pt-6 sm:px-6 lg:px-8">
+      <header className="flex flex-wrap items-start justify-between gap-4 max-md:flex-col">
+        <div className="grid gap-2">
+          <p className="text-[0.8em] tracking-[0.08em] uppercase opacity-60">
+            Experimental EVM interface
+          </p>
+          <h1 className="text-3xl font-bold">Application Interface Console</h1>
           <p>
             Discover semantic reads and prepare application actions from any
             compatible adapter.
@@ -975,14 +1022,14 @@ function App() {
         <WalletConnection />
       </header>
 
-      <section className="about">
-        <h2>About</h2>
+      <section className="grid gap-2 border-y py-4">
+        <h2 className="text-2xl font-bold">About</h2>
         <p>
           This console is a reference client for experimental standards that let
           EVM applications expose semantic queries, prepare action bundles, and
           continue calls through client-mediated HTTP requests.
         </p>
-        <nav aria-label="Project resources">
+        <nav className="flex flex-wrap gap-4" aria-label="Project resources">
           <a
             href="https://github.com/stephancill/onchain-app-interfaces"
             target="_blank"
@@ -1010,24 +1057,36 @@ function App() {
         </nav>
       </section>
 
-      <section className="examples">
-        <h2>Examples</h2>
-        <table>
+      <section className="grid gap-2 overflow-x-auto">
+        <h2 className="text-2xl font-bold">Examples</h2>
+        <table className="w-full border-collapse">
           <thead>
             <tr>
-              <th>Application</th>
-              <th>Network</th>
-              <th>Adapter</th>
-              <th>External origin</th>
-              <th></th>
+              <th className="border border-current px-2 py-2 text-left">
+                Application
+              </th>
+              <th className="border border-current px-2 py-2 text-left">
+                Network
+              </th>
+              <th className="border border-current px-2 py-2 text-left">
+                Adapter
+              </th>
+              <th className="border border-current px-2 py-2 text-left">
+                External origin
+              </th>
+              <th className="border border-current px-2 py-2 text-left"></th>
             </tr>
           </thead>
           <tbody>
             {examples.map((example) => (
               <tr key={example.address}>
-                <td>{example.name}</td>
-                <td>Base</td>
-                <td>
+                <td className="border border-current px-2 py-2 text-left">
+                  {example.name}
+                </td>
+                <td className="border border-current px-2 py-2 text-left">
+                  Base
+                </td>
+                <td className="border border-current px-2 py-2 text-left">
                   <a
                     href={`https://basescan.org/address/${example.address}`}
                     target="_blank"
@@ -1039,8 +1098,10 @@ function App() {
                     </code>
                   </a>
                 </td>
-                <td>{example.externalOrigin || "None"}</td>
-                <td>
+                <td className="border border-current px-2 py-2 text-left">
+                  {example.externalOrigin || "None"}
+                </td>
+                <td className="border border-current px-2 py-2 text-left">
                   <button
                     type="button"
                     onClick={() => void loadExample(example)}
@@ -1054,10 +1115,13 @@ function App() {
         </table>
       </section>
 
-      <section className="panel">
-        <h2>Load an adapter</h2>
-        <form className="target-form" onSubmit={submitTarget}>
-          <label>
+      <section className="grid gap-3">
+        <h2 className="text-2xl font-bold">Load an adapter</h2>
+        <form
+          className="grid grid-cols-[100px_1fr_1.3fr_auto] items-end gap-3 max-md:grid-cols-1"
+          onSubmit={submitTarget}
+        >
+          <label className="grid gap-3">
             Chain ID
             <input
               inputMode="numeric"
@@ -1070,7 +1134,7 @@ function App() {
               }
             />
           </label>
-          <label>
+          <label className="grid gap-3">
             RPC URL
             <input
               value={consoleState.rpcUrl}
@@ -1083,7 +1147,7 @@ function App() {
               spellCheck={false}
             />
           </label>
-          <label>
+          <label className="grid gap-3">
             Adapter address
             <input
               value={consoleState.address}
@@ -1102,12 +1166,12 @@ function App() {
           </button>
         </form>
         {(targetError || interfaceQuery.error) && (
-          <p className="error">
+          <p className="text-red-600">
             {targetError ?? errorMessage(interfaceQuery.error)}
           </p>
         )}
         {interfaceQuery.isFetching && (
-          <p className="muted">
+          <p className="text-sm opacity-60">
             Reading bytecode, capabilities, and descriptors...
           </p>
         )}
@@ -1115,15 +1179,15 @@ function App() {
 
       {loaded && (
         <>
-          <section className="panel policy-panel">
-            <div>
-              <h2>External Request policy</h2>
+          <section className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
+            <div className="col-span-2 grid gap-2 max-md:col-span-1">
+              <h2 className="text-2xl font-bold">External Request policy</h2>
               <p>
                 Only needed for capabilities that continue through HTTP. Values
                 stay in this page and are never sent onchain.
               </p>
             </div>
-            <label>
+            <label className="grid gap-3">
               Allowed origins (one per line)
               <textarea
                 value={consoleState.origins}
@@ -1135,7 +1199,7 @@ function App() {
                 spellCheck={false}
               />
             </label>
-            <label>
+            <label className="grid gap-3">
               Requirement values (JSON)
               <textarea
                 value={requirementText}
@@ -1145,8 +1209,12 @@ function App() {
                 spellCheck={false}
               />
             </label>
-            {policyError && <p className="error">{policyError}</p>}
-            <p className="notice">
+            {policyError && (
+              <p className="col-span-2 text-red-600 max-md:col-span-1">
+                {policyError}
+              </p>
+            )}
+            <p className="col-span-2 max-md:col-span-1">
               This browser console enforces an exact origin allowlist, but
               cannot provide production-grade DNS rebinding and private-network
               checks. Browser CORS policy may also reject otherwise valid
@@ -1154,27 +1222,25 @@ function App() {
             </p>
           </section>
 
-          <section className="summary">
-            <div>
+          <section className="grid gap-4 md:flex md:gap-4">
+            <div className="grid gap-1 border border-current p-2 md:flex-1">
               <strong>{loaded.queries.length}</strong>
               <span>Queries</span>
             </div>
-            <div>
+            <div className="grid gap-1 border border-current p-2 md:flex-1">
               <strong>{loaded.actions.length}</strong>
               <span>Actions</span>
             </div>
-            <div>
+            <div className="grid gap-1 border border-current p-2 md:flex-1">
               <strong>{loaded.unsupported.length}</strong>
               <span>Optional interfaces absent</span>
             </div>
           </section>
 
-          <section className="capabilities">
+          <section className="grid grid-cols-2 items-start gap-3 max-md:grid-cols-1">
             {loaded.queries.length > 0 && (
-              <div
-                className={`capability-column${loaded.actions.length === 0 ? " full" : ""}`}
-              >
-                <h2>Queries</h2>
+              <div className={columnClass(loaded.actions.length === 0)}>
+                <h2 className="text-2xl font-bold">Queries</h2>
                 {loaded.queries.map((capability) => (
                   <CapabilityCard
                     key={`query-${capability.id}`}
@@ -1188,10 +1254,8 @@ function App() {
               </div>
             )}
             {loaded.actions.length > 0 && (
-              <div
-                className={`capability-column${loaded.queries.length === 0 ? " full" : ""}`}
-              >
-                <h2>Actions</h2>
+              <div className={columnClass(loaded.queries.length === 0)}>
+                <h2 className="text-2xl font-bold">Actions</h2>
                 {loaded.actions.map((capability) => (
                   <CapabilityCard
                     key={`action-${capability.id}`}
@@ -1206,7 +1270,7 @@ function App() {
             )}
           </section>
           {loaded.queries.length + loaded.actions.length === 0 && (
-            <p className="empty">The adapter exposes no capabilities.</p>
+            <p>The adapter exposes no capabilities.</p>
           )}
         </>
       )}
