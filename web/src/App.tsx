@@ -730,16 +730,27 @@ function CapabilityCard(parameters: {
   }
 
   return (
-    <article className="capability-card">
-      <div className="capability-heading">
-        <div>
-          <span>{descriptor.kind}</span>
-          <h3>{descriptor.name}</h3>
-        </div>
+    <details className="capability-card">
+      <summary className="capability-summary">
+        <span className="capability-kind">{descriptor.kind}</span>
+        <span className="capability-name">{descriptor.name}</span>
+        <span className="capability-spacer" />
+        {mutation.isPending && (
+          <span className="capability-status pending" title="Resolving" />
+        )}
+        {mutation.error && (
+          <span className="capability-status error" title="Failed" />
+        )}
+        {mutation.data && (
+          <span className="capability-status ready" title="Completed" />
+        )}
         <code title={capability.id}>
           {capability.id.slice(0, 10)}...{capability.id.slice(-6)}
         </code>
-      </div>
+        <span className="capability-chevron" aria-hidden="true">
+          ▸
+        </span>
+      </summary>
       {descriptor.description && <p>{descriptor.description}</p>}
       <dl className="metadata">
         <div>
@@ -846,7 +857,7 @@ function CapabilityCard(parameters: {
           )}
         </div>
       )}
-    </article>
+    </details>
   );
 }
 
@@ -1159,16 +1170,40 @@ function App() {
           </section>
 
           <section className="capabilities">
-            {[...loaded.queries, ...loaded.actions].map((capability) => (
-              <CapabilityCard
-                key={`${capability.descriptor.kind}-${capability.id}`}
-                capability={capability}
-                target={target!}
-                account={account}
-                requirementValues={requirementValues}
-                allowedOrigins={allowedOrigins}
-              />
-            ))}
+            {loaded.queries.length > 0 && (
+              <div
+                className={`capability-column${loaded.actions.length === 0 ? " full" : ""}`}
+              >
+                <h2>Queries</h2>
+                {loaded.queries.map((capability) => (
+                  <CapabilityCard
+                    key={`query-${capability.id}`}
+                    capability={capability}
+                    target={target!}
+                    account={account}
+                    requirementValues={requirementValues}
+                    allowedOrigins={allowedOrigins}
+                  />
+                ))}
+              </div>
+            )}
+            {loaded.actions.length > 0 && (
+              <div
+                className={`capability-column${loaded.queries.length === 0 ? " full" : ""}`}
+              >
+                <h2>Actions</h2>
+                {loaded.actions.map((capability) => (
+                  <CapabilityCard
+                    key={`action-${capability.id}`}
+                    capability={capability}
+                    target={target!}
+                    account={account}
+                    requirementValues={requirementValues}
+                    allowedOrigins={allowedOrigins}
+                  />
+                ))}
+              </div>
+            )}
           </section>
           {loaded.queries.length + loaded.actions.length === 0 && (
             <p className="empty">The adapter exposes no capabilities.</p>
