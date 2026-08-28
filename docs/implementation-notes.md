@@ -1,6 +1,12 @@
 # Implementation Notes
 
-This document records implementation findings that affect the experimental interfaces and specifications. It must not contain credentials, personal information, or private endpoint details.
+This document records implementation findings that affect the experimental interfaces and specifications. It must not contain credentials, personal information, or privately funded endpoint details.
+
+## 2026-08-28
+
+- Deployed and verified the three web-console reference adapters on Base mainnet (8453), each a single `eth_sendTransaction` from the console deployer:
+  - Aerodrome adapter `0x9c952d2530e8e94512f14fe6987fccb5d8a3b6e2`; Moonwell adapter `0xf5c03ce6356d9dafe49f3254b38f7e747958b0c0`; Avantis adapter `0x02a1c3b80ceedc01f8d83ee49f194b6d5bdf9232`. Each had a successful receipt (status 0x1) and live runtime bytecode (Aerodrome 8.9 KB, Moonwell 10.4 KB, Avantis 22.8 KB).
+- Updated the web console's example adapter list in `web/src/App.tsx` to point at the freshly deployed contracts so the demo loads the live adapters. Verified on Base that Aerodrome and Moonwell each return 5 query ids.
 
 ## 2026-08-28
 
