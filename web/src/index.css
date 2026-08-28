@@ -131,7 +131,8 @@ td {
 }
 
 input,
-textarea {
+textarea,
+select {
   min-width: 0;
   width: 100%;
 }
@@ -145,6 +146,56 @@ dd {
 pre {
   max-width: 100%;
   overflow: auto;
+}
+
+.editor-fields {
+  display: grid;
+  gap: 8px;
+  margin-block: 8px;
+}
+
+.editor-field {
+  display: grid;
+  gap: 4px;
+  align-items: start;
+}
+
+.editor-field em {
+  font-style: normal;
+  opacity: 0.6;
+  font-size: 0.85em;
+}
+
+.editor-field .error {
+  font-size: 0.8em;
+}
+
+.editor-bool {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editor-bool input {
+  width: auto;
+}
+
+.editor-group {
+  border: 1px solid;
+  border-radius: 4px;
+  padding: 8px 10px 10px;
+}
+
+.editor-group legend {
+  font-weight: 600;
+  padding-inline: 4px;
+}
+
+.editor-json pre {
+  max-height: 240px;
+  overflow: auto;
+  font-size: 0.85em;
+  opacity: 0.9;
 }
 
 @media (max-width: 760px) {

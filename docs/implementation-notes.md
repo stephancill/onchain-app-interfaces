@@ -26,6 +26,7 @@ This document records implementation findings that affect the experimental inter
 - Made `parseApplicationDescriptor` browser-portable by replacing Node's `Buffer` with viem's `hexToBytes`; the browser test surfaced this as the only client dependency on Node globals.
 - Ran the console in a real Chromium browser against fresh adapter deployments on a local Anvil, with the HTTP fixture tunneled through a public HTTPS endpoint so the client's HTTPS requirement and origin authorization hold in the browser.
 - Verified in the browser: Avantis `avantis.positions` resolves through External Request and renders the projected typed trade/order tuples; `avantis.trade.open` prepares the USDC approval plus `openTrade` bundle from a projected transaction; Moonwell `moonwell.health` delivers its RAW JSON body bound to the requested account.
+- Replaced the console's raw JSON input textarea with a structured descriptor-driven editor: per-field text inputs, boolean checkboxes, enum selects, nested tuple fieldsets, inline validation, and a read-only encoded-values preview. Verified in the browser that controls update the encoded values and that address/integer validation messages surface.
 - Current verification: 31 Forge tests and 38 Bun tests pass; root and web `bun run check`, `forge fmt`, and web production build all pass.
 
 ## 2026-08-25

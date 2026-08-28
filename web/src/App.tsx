@@ -116,7 +116,6 @@ const targetSchema = z.object({
   address: z.string().refine(isAddress, "Enter a valid adapter address"),
 });
 
-const valuesSchema = z.record(z.string(), z.unknown());
 const requirementValuesSchema = z.record(z.string(), z.string());
 const baseRpcUrl = "https://evm.stupidtech.net/v1/8453";
 const aerodromeWethUsdcPool = "0xcDAC0d6c6C59727a65F871236188350531885C43";
@@ -176,50 +175,50 @@ function jsonValue(value: unknown): string {
   );
 }
 
-function defaultFieldValue(field: DescriptorField, account?: Address): unknown {
-  if (field.abiType === "tuple") {
+function emptyFieldValue(field: DescriptorField, account?: Address): unknown {
+  const core = field.abiType.split("[]")[0] ?? field.abiType;
+  if (core === "tuple") {
     return Object.fromEntries(
       (field.components ?? []).map((component) => [
         component.name,
-        defaultFieldValue(component, account),
+        emptyFieldValue(component, account),
       ]),
     );
   }
-  if (field.abiType === "address") {
-    return account ?? "0x0000000000000000000000000000000000000000";
-  }
+  if (field.abiType === "address") return account ?? "";
   if (field.abiType === "bool") return false;
   if (field.semanticType === "timestamp") {
     return String(Math.floor(Date.now() / 1000) + 60 * 60);
+  }
+  if (field.enumValues !== undefined) {
+    return Object.keys(field.enumValues)[0] ?? "";
   }
   if (/^u?int/.test(field.abiType)) return field.minimum ?? "0";
   if (field.abiType.startsWith("bytes")) return "0x";
   return "";
 }
 
-function defaultValues(
+function initialEditorValue(
   descriptor: ApplicationDescriptor,
   account?: Address,
-): string {
+): Record<string, unknown> {
+  const bound = account ?? "0x0000000000000000000000000000000000000000";
   if (descriptor.name === "aerodrome.poolState") {
-    return jsonValue({ pool: aerodromeWethUsdcPool });
+    return { pool: aerodromeWethUsdcPool };
   }
   if (descriptor.name === "aerodrome.lpPosition") {
-    return jsonValue({
-      pool: aerodromeWethUsdcPool,
-      account: account ?? "0x0000000000000000000000000000000000000000",
-    });
+    return { pool: aerodromeWethUsdcPool, account: bound };
   }
   if (descriptor.name === "aerodrome.swapQuote.exactInput") {
-    return jsonValue({
+    return {
       pool: aerodromeWethUsdcPool,
       tokenIn: "0x4200000000000000000000000000000000000006",
       tokenOut: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
       amountIn: "1000000000000000000",
-    });
+    };
   }
   if (descriptor.name === "aerodrome.swap.exactInput") {
-    return jsonValue({
+    return {
       parameters: {
         pool: aerodromeWethUsdcPool,
         tokenIn: "0x4200000000000000000000000000000000000006",
@@ -228,44 +227,26 @@ function defaultValues(
         maxSlippageBps: "100",
         deadline: String(Math.floor(Date.now() / 1000) + 60 * 60),
       },
-    });
+    };
   }
-  if (descriptor.name === "moonwell.position.usdc") {
-    return jsonValue({
-      account: account ?? "0x0000000000000000000000000000000000000000",
-    });
-  }
-  if (descriptor.name === "moonwell.positions") {
-    return jsonValue({
-      account: account ?? "0x0000000000000000000000000000000000000000",
-    });
-  }
-  if (descriptor.name === "moonwell.health") {
-    return jsonValue({
-      account: account ?? "0x0000000000000000000000000000000000000000",
-    });
+  if (
+    descriptor.name === "moonwell.position.usdc" ||
+    descriptor.name === "moonwell.positions" ||
+    descriptor.name === "moonwell.health" ||
+    descriptor.name === "avantis.positions" ||
+    descriptor.name === "avantis.account"
+  ) {
+    return { account: bound };
   }
   if (descriptor.name === "moonwell.supply.usdc") {
-    return jsonValue({
-      parameters: {
-        amount: "1000000",
-        enableAsCollateral: false,
-      },
-    });
+    return {
+      parameters: { amount: "1000000", enableAsCollateral: false },
+    };
   }
-  if (descriptor.name === "avantis.positions") {
-    return jsonValue({
-      account: account ?? "0x0000000000000000000000000000000000000000",
-    });
-  }
-  if (descriptor.name === "avantis.markets") {
-    return jsonValue({});
-  }
-  if (descriptor.name === "avantis.market") {
-    return jsonValue({ pairIndex: "0" });
-  }
+  if (descriptor.name === "avantis.markets") return {};
+  if (descriptor.name === "avantis.market") return { pairIndex: "0" };
   if (descriptor.name === "avantis.trade.open") {
-    return jsonValue({
+    return {
       parameters: {
         pairIndex: "0",
         isLong: true,
@@ -278,10 +259,10 @@ function defaultValues(
         stopLoss: "900000000000000",
         executionFeeWei: "350000000000000",
       },
-    });
+    };
   }
   if (descriptor.name === "avantis.trade.close") {
-    return jsonValue({
+    return {
       parameters: {
         pairIndex: "0",
         tradeIndex: "0",
@@ -289,13 +270,13 @@ function defaultValues(
         expectedPrice: "40000000000000",
         executionFeeWei: "350000000000000",
       },
-    });
+    };
   }
   if (descriptor.name === "avantis.limit.cancel") {
-    return jsonValue({ parameters: { pairIndex: "0", orderIndex: "0" } });
+    return { parameters: { pairIndex: "0", orderIndex: "0" } };
   }
   if (descriptor.name === "avantis.limit.update") {
-    return jsonValue({
+    return {
       parameters: {
         pairIndex: "0",
         orderIndex: "0",
@@ -304,10 +285,10 @@ function defaultValues(
         takeProfit: "50000000000000",
         stopLoss: "30000000000000",
       },
-    });
+    };
   }
   if (descriptor.name === "avantis.position.increase") {
-    return jsonValue({
+    return {
       parameters: {
         pairIndex: "0",
         tradeIndex: "0",
@@ -316,10 +297,10 @@ function defaultValues(
         openPrice: "40000000000000",
         slippagePercent: "10000000000",
       },
-    });
+    };
   }
   if (descriptor.name === "avantis.margin.update") {
-    return jsonValue({
+    return {
       parameters: {
         pairIndex: "0",
         tradeIndex: "0",
@@ -328,20 +309,175 @@ function defaultValues(
         priceSourcing: "PRO",
         oracleFeeWei: "1",
       },
-    });
+    };
   }
-  if (descriptor.name === "avantis.account") {
-    return jsonValue({
-      account: account ?? "0x0000000000000000000000000000000000000000",
-    });
+  return Object.fromEntries(
+    descriptor.inputs.fields.map((field) => [
+      field.name,
+      emptyFieldValue(field, account),
+    ]),
+  );
+}
+
+function fieldValidation(
+  field: DescriptorField,
+  value: unknown,
+): string | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (field.abiType === "address") {
+    return typeof value === "string" && isAddress(value)
+      ? undefined
+      : "Enter a valid 0x address";
   }
-  return jsonValue(
-    Object.fromEntries(
-      descriptor.inputs.fields.map((field) => [
-        field.name,
-        defaultFieldValue(field, account),
-      ]),
-    ),
+  if (/^u?int/.test(field.abiType)) {
+    const text = String(value);
+    const valid = /^(0|[1-9][0-9]*)$/.test(text);
+    if (!valid) return "Enter a non-negative decimal integer";
+    const parsed = BigInt(text);
+    if (field.minimum !== undefined && parsed < BigInt(field.minimum)) {
+      return `At least ${field.minimum}`;
+    }
+    if (field.maximum !== undefined && parsed > BigInt(field.maximum)) {
+      return `At most ${field.maximum}`;
+    }
+    return undefined;
+  }
+  if (field.abiType.startsWith("bytes")) {
+    const text = String(value);
+    if (!/^0x[0-9a-fA-F]*$/.test(text)) return "Enter 0x hex";
+    if (field.abiType === "bytes32" && text.length !== 66) {
+      return "bytes32 must be exactly 64 hex digits";
+    }
+    return undefined;
+  }
+  if (field.abiType === "string") {
+    const text = String(value);
+    if (field.minLength !== undefined && text.length < field.minLength) {
+      return `At least ${field.minLength} characters`;
+    }
+    if (field.maxLength !== undefined && text.length > field.maxLength) {
+      return `At most ${field.maxLength} characters`;
+    }
+  }
+  return undefined;
+}
+
+function fieldHint(field: DescriptorField): string {
+  const parts: string[] = [];
+  if (field.semanticType !== undefined) parts.push(field.semanticType);
+  if (field.minimum !== undefined) parts.push(`min ${field.minimum}`);
+  if (field.maximum !== undefined) parts.push(`max ${field.maximum}`);
+  return parts.join(" \u00b7 ");
+}
+
+function EditorField(parameters: {
+  field: DescriptorField;
+  value: unknown;
+  account?: Address;
+  onChange: (value: unknown) => void;
+}) {
+  const { field, value, account, onChange } = parameters;
+  const core = field.abiType.split("[]")[0] ?? field.abiType;
+
+  if (core === "tuple") {
+    const record = (value ?? {}) as Record<string, unknown>;
+    return (
+      <fieldset className="editor-group">
+        <legend>{field.name}</legend>
+        <EditorFields
+          fields={field.components ?? []}
+          values={record}
+          account={account}
+          onChange={(next) => onChange(next)}
+        />
+      </fieldset>
+    );
+  }
+
+  if (field.abiType === "bool") {
+    return (
+      <label className="editor-field editor-bool">
+        <input
+          type="checkbox"
+          checked={value === true}
+          onChange={(event) => onChange(event.target.checked)}
+        />
+        <span>{field.name}</span>
+      </label>
+    );
+  }
+
+  if (field.enumValues !== undefined) {
+    const labels = Object.keys(field.enumValues);
+    const current =
+      typeof value === "string" && labels.includes(value) ? value : "";
+    return (
+      <label className="editor-field">
+        <span>
+          {field.name}
+          {fieldHint(field) && <em> {fieldHint(field)}</em>}
+        </span>
+        <select
+          value={current}
+          onChange={(event) => onChange(event.target.value)}
+        >
+          {labels.map((label) => (
+            <option key={label} value={label}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  }
+
+  const validation = fieldValidation(field, value);
+  return (
+    <label className="editor-field">
+      <span>
+        {field.name}
+        {fieldHint(field) && <em> {fieldHint(field)}</em>}
+      </span>
+      <input
+        type="text"
+        value={value === undefined || value === null ? "" : String(value)}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={
+          field.abiType === "address"
+            ? "0x..."
+            : field.abiType.startsWith("bytes")
+              ? "0x..."
+              : undefined
+        }
+        spellCheck={false}
+        aria-invalid={validation !== undefined || undefined}
+      />
+      {validation !== undefined && (
+        <small className="error">{validation}</small>
+      )}
+    </label>
+  );
+}
+
+function EditorFields(parameters: {
+  fields: readonly DescriptorField[];
+  values: Record<string, unknown>;
+  account?: Address;
+  onChange: (next: Record<string, unknown>) => void;
+}) {
+  const { fields, values, account, onChange } = parameters;
+  return (
+    <div className="editor-fields">
+      {fields.map((field) => (
+        <EditorField
+          key={field.name}
+          field={field}
+          value={values[field.name]}
+          account={account}
+          onChange={(value) => onChange({ ...values, [field.name]: value })}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -467,8 +603,8 @@ function CapabilityCard(parameters: {
 }) {
   const { capability, target, account, requirementValues, allowedOrigins } =
     parameters;
-  const [values, setValues] = useState(() =>
-    defaultValues(capability.descriptor, account),
+  const [editorValues, setEditorValues] = useState(() =>
+    initialEditorValue(capability.descriptor, account),
   );
   const [actionAccount, setActionAccount] = useState(account ?? "");
   const [executionError, setExecutionError] = useState<string>();
@@ -481,10 +617,9 @@ function CapabilityCard(parameters: {
   });
   const mutation = useMutation({
     mutationFn: async () => {
-      const parsedValues = valuesSchema.parse(JSON.parse(values));
       const encodedParameters = encodeDescriptorParameters({
         descriptor: capability.descriptor,
-        values: parsedValues,
+        values: editorValues,
       });
 
       if (capability.descriptor.kind === "query") {
@@ -637,15 +772,19 @@ function CapabilityCard(parameters: {
           />
         </label>
       )}
-      <label>
-        Input values (JSON)
-        <textarea
-          value={values}
-          onChange={(event) => setValues(event.target.value)}
-          rows={Math.max(5, descriptor.inputs.fields.length * 2 + 2)}
-          spellCheck={false}
+      <div>
+        <strong>Input values</strong>
+        <EditorFields
+          fields={descriptor.inputs.fields}
+          values={editorValues}
+          account={account}
+          onChange={setEditorValues}
         />
-      </label>
+      </div>
+      <details className="editor-json">
+        <summary>Encoded values (JSON)</summary>
+        <pre>{jsonValue(editorValues)}</pre>
+      </details>
       <button
         type="button"
         onClick={() => mutation.mutate()}
