@@ -47,6 +47,8 @@ The end-to-end tests additionally require `anvil` and `openssl`. They compile an
 bun run test:e2e
 ```
 
+A full local stack for the `web/` console is available with `bun scripts/dev-stack.ts`: anvil with all three hybrid adapters deployed and a local API fixture exposed over a public HTTPS tunnel. It prints the RPC URL, adapter addresses, and tunnel origin to use as the console's External Request allowlist. Start the console itself with `cd web && bun run dev`.
+
 ## Reference Client
 
 `resolveCall` accepts injected EVM, requirement-resolution, authorization, and HTTP functions. Requirement values are passed only to HTTP request construction and are never included in callback calldata.
