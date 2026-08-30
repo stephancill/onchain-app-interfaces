@@ -10,7 +10,6 @@ import {
     HttpResponse,
     JsonAbiNode,
     JsonAbiNodeType,
-    RequestLocation,
     RequestRequirement,
     ResponseBodyEncoding,
     ResponseTransform,
@@ -271,10 +270,7 @@ contract RelayApplicationAdapter is IApplicationQueries, IApplicationActions {
         HttpHeader[] memory headers = new HttpHeader[](2);
         headers[0] = HttpHeader({name: "Accept", value: "application/json"});
         headers[1] = HttpHeader({name: "Content-Type", value: "application/json"});
-        RequestRequirement[] memory requirements = new RequestRequirement[](1);
-        requirements[0] = RequestRequirement({
-            location: RequestLocation.HEADER, path: "x-api-key", description: "Relay API key", sensitive: true
-        });
+        RequestRequirement[] memory requirements = new RequestRequirement[](0);
         revert ExternalRequest({
             sender: address(this),
             request: HttpRequest({

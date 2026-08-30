@@ -9,7 +9,7 @@ Experimental hybrid query/action adapter implemented in `contracts/adapters/Rela
 - `relay.route.quote` — an indicative EXACT_INPUT preview. It POSTs `/quote/v2` with `indicativeQuote: true` and returns the raw response body bound to the requested chain pair and amount.
 - `relay.bridge.exactInput` — POSTs an executable `/quote/v2` and reduces the returned origin-chain EVM steps (`approve` → `deposit`/`swap`) into an ordered `PreparedAction` bundle.
 
-Both require a sensitive `x-api-key` header (`RequestRequirement`). The key stays in the client and the HTTP request; it never enters callback calldata or results.
+Both POST `/quote/v2` with no authentication requirement (Relay's `x-api-key` is optional and only raises rate limits). The adapter declares no `RequestRequirement`, so a client can run the example without supplying a key.
 
 ## Execution Model
 
