@@ -31,6 +31,19 @@ const actionJson = JSON.stringify({
   },
   output: { encoding: "preparedAction" },
   execution: { atomicity: "atomic-required" },
+  effects: [
+    {
+      type: "decrease",
+      assetField: "parameters.slug",
+      amountField: "parameters.quantity",
+    },
+    {
+      type: "increase",
+      assetField: "parameters.quantity",
+      chainIdField: "parameters.destinationChain",
+      description: "cross-chain effect",
+    },
+  ],
 });
 
 describe("application descriptors", () => {
@@ -53,6 +66,13 @@ describe("application descriptors", () => {
       [{ slug: "test-drop", quantity: 2 }],
     );
     expect(encoded).toBe(expected);
+  });
+
+  test("preserves a chainIdField on an action effect", () => {
+    const descriptor = parseApplicationDescriptor(actionJson);
+    const effect =
+      descriptor.kind === "action" ? descriptor.effects?.[1] : undefined;
+    expect(effect?.chainIdField).toBe("parameters.destinationChain");
   });
 
   test("applies descriptor constraints before encoding", () => {

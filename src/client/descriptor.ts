@@ -122,6 +122,7 @@ const effectSchema = z
     assetField: z.string().optional(),
     amountField: z.string().optional(),
     minimumField: z.string().optional(),
+    chainIdField: z.string().optional(),
     description: z.string().optional(),
   })
   .strict();
