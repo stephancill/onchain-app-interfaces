@@ -142,6 +142,13 @@ const examples = [
     externalOrigin:
       "https://core.avantisfi.com\nhttps://tx-builder.avantisfi.com",
   },
+  {
+    name: "Relay",
+    chainId: "8453",
+    rpcUrl: baseRpcUrl,
+    address: "0x2BE7659C8e7627F1C2aB08CebA6bcb72D50747E5",
+    externalOrigin: "https://api.relay.link",
+  },
 ] as const;
 
 type Target = z.infer<typeof targetSchema>;
@@ -198,6 +205,7 @@ function emptyFieldValue(field: DescriptorField, account?: Address): unknown {
   return "";
 }
 
+const nativeZero = "0x0000000000000000000000000000000000000000";
 function initialEditorValue(
   descriptor: ApplicationDescriptor,
   account?: Address,
@@ -308,6 +316,30 @@ function initialEditorValue(
         collateralUsdc: "25000000",
         priceSourcing: "PRO",
         oracleFeeWei: "1",
+      },
+    };
+  }
+  if (descriptor.name === "relay.route.quote") {
+    return {
+      account: bound,
+      originChainId: "8453",
+      destinationChainId: "10",
+      originCurrency: nativeZero,
+      destinationCurrency: nativeZero,
+      amount: "1000000000000000",
+    };
+  }
+  if (descriptor.name === "relay.bridge.exactInput") {
+    return {
+      parameters: {
+        originChainId: "8453",
+        destinationChainId: "10",
+        originCurrency: nativeZero,
+        destinationCurrency: nativeZero,
+        amount: "1000000000000000",
+        recipient: "0x",
+        slippageBps: "30",
+        ttlSeconds: "600",
       },
     };
   }
