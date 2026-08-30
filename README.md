@@ -25,6 +25,7 @@ Reference adapters live in `contracts/adapters/`:
 - an authenticated [OpenSea stats/public-mint adapter](docs/adapters/opensea.md);
 - a query-only [Bitrefill catalog adapter](docs/adapters/bitrefill.md);
 - a comprehensive hybrid [Avantis markets and position-management adapter](docs/adapters/avantis.md) with validated tx-builder calldata.
+- a chain-agnostic hybrid [Relay bridge/swap adapter](docs/adapters/relay.md) that reduces an EXACT_INPUT `/quote/v2` intent to its origin-chain EVM deposit bundle.
 
 Cross-application evidence and proposed standards changes are consolidated in [`docs/prototype-findings.md`](docs/prototype-findings.md).
 
