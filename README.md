@@ -10,6 +10,10 @@ The design context is in the [original technical handover](docs/Technical%20Hand
 
 Normative drafts live in `spec/`. Solidity interfaces live in `contracts/`. The TypeScript reference client lives in `src/client/`.
 
+The agent skill lives in [`skills/onchain-app-interfaces/`](skills/onchain-app-interfaces/) and includes a Python 3.9+, standard-library-only command-line client. It can discover, query, and prepare against an adapter without cloning dependencies or resolving JavaScript packages.
+
+OpenCode discovers the skill locally through this repository's `opencode.json`. Remote users can add `https://onchain-app-interfaces.pages.dev/.well-known/skills/` to their OpenCode `skills` configuration; the Pages build generates that catalog directly from the canonical `skills/` directory.
+
 Pre-number ERC working papers live in [`docs/eips/`](docs/eips/). They are formatted for eventual submission but remain subordinate to the experimental specifications until the ABIs are stabilized.
 
 - `spec/QUERIES.md` defines semantic application reads.
@@ -68,6 +72,20 @@ const result = await resolveCall({
 ```
 
 `authorizeRequest` is mandatory and runs before network access. It must enforce origin authorization, DNS/IP destination policy, and any user-consent requirements. It must not log sensitive requirement values.
+
+`stringifyJson` serializes decoded values with bigints represented as decimal strings.
+
+## Skill Client
+
+The bundled skill client can run from any directory and has no package-install step:
+
+```sh
+python3 skills/onchain-app-interfaces/scripts/adapter.py discover \
+  --chain-id 8453 \
+  --adapter 0xfa5725214419f9688133841f67e10c4783d17b26
+```
+
+Its `query` and `prepare` commands accept descriptor values from a JSON file or stdin, derive selectors from canonical signatures, resolve recursive External Requests, and emit BigInt-safe JSON. External HTTP is denied unless its exact HTTPS origin is passed with `--allow-origin`; DNS answers must all be public, and the connection is pinned to a validated address while TLS continues to verify the original hostname. The client never executes prepared calls.
 
 ## Web Console
 

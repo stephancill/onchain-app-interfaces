@@ -10,6 +10,7 @@ export {
   validateRequest,
 } from "./request.ts";
 export { resolveCall } from "./resolve.ts";
+export { stringifyJson } from "./json.ts";
 export { transformHttpResponse } from "./transform.ts";
 export type { ResponseBodyEncoding } from "./transform.ts";
 export {

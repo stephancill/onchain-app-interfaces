@@ -4,11 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "bun run format:check && bun run lint && bun run typecheck && bun run test",
+    "check": "bun run format:check && bun run lint && bun run typecheck && bun run test && bun run test:python",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "lint": "oxlint .",
     "test": "bun test ./test",
+    "test:python": "python3 -m unittest discover -s test/python -p 'test_*.py'",
     "test:e2e": "bun test test/e2e",
     "test:fork:aerodrome": "forge test --match-contract AerodromeApplicationAdapterTest --fork-url https://evm.stupidtech.net/v1/8453",
     "test:fork:moonwell": "forge test --match-contract MoonwellApplicationAdapterTest --fork-url https://evm.stupidtech.net/v1/8453",

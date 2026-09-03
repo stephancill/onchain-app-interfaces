@@ -7,25 +7,51 @@ description: Read and interpret experimental Onchain Application Interfaces from
 
 Read deployed adapters through the repository's experimental query, action, descriptor, and External Request interfaces. Treat discovery and action preparation as reads; never broadcast prepared calls unless the user separately requests execution.
 
+## Bundled Client
+
+Use `scripts/adapter.py` from this skill directory for discovery, queries, and action preparation. It requires Python 3.9 or newer and has no third-party dependencies. Run it from any working directory; do not recreate ABI selectors or temporary TypeScript clients.
+
+```sh
+python3 <skill-directory>/scripts/adapter.py discover \
+  --chain-id 8453 \
+  --adapter 0x...
+
+printf '%s' '{"pairIndex":"1"}' | python3 <skill-directory>/scripts/adapter.py query \
+  --chain-id 8453 \
+  --adapter 0x... \
+  --name avantis.market \
+  --allow-origin https://tx-builder.avantisfi.com \
+  --values-file -
+
+printf '%s' '{"delegate":"0x..."}' | python3 <skill-directory>/scripts/adapter.py prepare \
+  --chain-id 8453 \
+  --adapter 0x... \
+  --name avantis.delegate.remove \
+  --account 0x... \
+  --values-file -
+```
+
+The client emits JSON with EVM integers represented as decimal strings. It deliberately has no execute, sign, simulate, or broadcast command. Pass each permitted External Request origin with `--allow-origin`. Supply requirement values only by mapping a requirement key to an existing environment variable, for example `--requirement-env 'HEADER:Authorization=API_AUTHORIZATION'`; never put a sensitive value in shell arguments or input JSON.
+
 ## Workflow
 
 1. Establish the chain ID, adapter address, and RPC URL. Never infer the chain from an address. If no RPC is supplied, use `https://evm.stupidtech.net/v1/<chainId>`.
 2. Verify that the adapter address has bytecode. State clearly if adapter identity or authenticity is not established.
-3. Find the repository root containing `contracts/IApplicationQueries.sol` and `src/client/index.ts`. Read the relevant file in `spec/` before interpreting behavior:
+3. The canonical repository is `https://github.com/stephancill/onchain-app-interfaces`. Clone it when the specifications are not already available locally, then read the relevant file in `spec/` before interpreting behavior:
    - `spec/QUERIES.md` for semantic reads.
    - `spec/ACTIONS.md` for action preparation.
    - `spec/DESCRIPTORS.md` for parameters, outputs, constraints, provenance, effects, and execution metadata.
    - `spec/EXTERNAL_REQUEST.md` when a call reverts with `ExternalRequest`.
-4. Discover capabilities with `queries()` and `actions()`. These interfaces are optional; report a missing or reverting capability separately instead of treating the whole adapter as invalid.
+4. Discover capabilities with the bundled client's `discover` command. `queries()` and `actions()` are optional; report a missing or reverting capability separately instead of treating the whole adapter as invalid.
 5. Fetch every relevant `queryDescriptor(bytes32)` or `actionDescriptor(bytes32)` value. Parse it with `parseApplicationDescriptor` from `src/client/index.ts`; do not hand-parse or silently accept malformed descriptors.
 6. Present capability IDs as exact `bytes32` hex plus descriptor names. IDs are adapter-defined; do not infer a global taxonomy.
-7. For an invocation, collect values for every named input field, apply descriptor constraints, and encode with `encodeDescriptorParameters`. Preserve integer precision with decimal strings or `bigint`; never use floating-point arithmetic for onchain units.
-8. Execute the read with `resolveCall` so recursive External Requests work. Decode the top-level ABI return first. For a query, decode the resulting inner `bytes` with `decodeDescriptorResult`. For an action, decode the returned `PreparedAction` directly.
+7. For an invocation, collect values for every named input field and pass them as a JSON object to `--values-file`. Preserve integer precision with decimal strings; never use floating-point arithmetic for onchain units.
+8. Use the bundled client's `query` or `prepare` command so descriptor constraints, recursive External Requests, top-level function returns, and nested result tuples are handled consistently.
 9. Report provenance, sensitivity, expiry, effects, atomicity metadata, and unresolved trust assumptions alongside the result.
 
 ## Interface Calls
 
-Use the current Solidity interfaces as the ABI source rather than explorer-inferred ABIs:
+Use the bundled client or encode from the current Solidity interfaces rather than explorer-inferred ABIs. Never derive or enter four-byte selectors by hand; derive them from canonical signatures with Ethereum Keccak-256.
 
 ```text
 queries() -> bytes32[]
@@ -37,13 +63,13 @@ actionDescriptor(bytes32) -> bytes
 prepare(bytes32,address,bytes) -> ((address target,uint256 value,bytes data)[] calls,uint256 validUntil)
 ```
 
-Prefer viem and the repository helpers. Ensure the injected `ethCall` preserves EVM revert data because `resolveCall` needs it to decode `ExternalRequest`.
+When diagnosing below the bundled client, prefer viem and the repository helpers. Ensure the injected `ethCall` preserves EVM revert data because `resolveCall` needs it to decode `ExternalRequest`. See `references/low-level-decoding.md` before manually decoding a result.
 
 ## External Requests
 
 When `query` or `prepare` reverts with `ExternalRequest`:
 
-1. Use `resolveCall`; do not recreate callback calldata manually unless diagnosing the client.
+1. Use the bundled client, or `resolveCall` when working inside the reference repository; do not recreate callback calldata manually unless diagnosing the client.
 2. Require `sender` to equal the address called at that recursion step.
 3. Authorize the exact HTTPS origin and enforce DNS/IP destination policy before network access. Do not automatically follow redirects.
 4. Resolve every requirement explicitly. Ask the user for approval or an approved credential resolver when a value is unavailable.
