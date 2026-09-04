@@ -2,6 +2,11 @@
 
 This document records implementation findings that affect the experimental interfaces and specifications. It must not contain credentials, personal information, or privately funded endpoint details.
 
+## 2026-09-03
+
+- Fixed the `relay.bridge.exactInput` transform, which was broken at two levels (and had never run live because a panic fired first). The defects in `RelayApplicationAdapter._stepsTransform` were (1) a wrapping `TUPLE` root that emitted `abi.encode(tuple{array,...})` instead of the bare `RelayStep[]` that `prepareCallback` decodes, and (2) an extra 1-field tuple wrapping each item's five-field `/data` tuple. The root is now the bare `ARRAY "/steps"` and each item's transaction is the five-field `data` tuple directly (10 nodes). Verified end-to-end on an Anvil Base fork with a live `/quote/v2` to `api.relay.link`: `resolveCall` now carries `prepare` through the `ExternalRequest` continuation and decodes a correct `PreparedAction` — one origin-chain call to depository `0x4cD0…`, value `1000000000000000`, recipient calldata, plus `validUntil`. Note: the adapter I deployed earlier (`0x1E80534C558Cb50567cF77b5EC7271c46d76633e`) was built from the still-broken transform and must be redeployed with this fix to actually work.
+- Separately fixed an array-out-of-bounds `panic 0x32` in `_stepsTransform` (it allocated `new JsonAbiNode[](11)` but wrote 12 nodes) and strengthened `testPrepareExitsViaExternalRequest` to require the `ExternalRequest` custom error rather than accepting the `0x4eee8b71` panic.
+
 ## 2026-08-30
 
 - Added a chain-agnostic hybrid Relay adapter (`contracts/adapters/RelayApplicationAdapter.sol`): an indicative `relay.route.quote` query and an executable `relay.bridge.exactInput` action over Relay's `POST /quote/v2`. The action reduces the returned origin-chain EVM steps into an ordered `PreparedAction` (approve → deposit/swap), keeping the deposit `to`/`data` verbatim per Relay's guidance and never hardcoding the depository. Deployed bytecode is 13113 bytes (under EIP-170) with inline descriptors and a 11-node JSON_ABI projection tree.

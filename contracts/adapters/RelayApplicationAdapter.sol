@@ -332,24 +332,25 @@ contract RelayApplicationAdapter is IApplicationQueries, IApplicationActions {
         transform = ResponseTransform({kind: ResponseTransformKind.RAW, statusFrom: 0, statusTo: 0, nodes: nodes});
     }
 
-    /// @notice Flattens `steps[]` into `RelayStep[] {kind, items[] {from,to,data,value,chainId}}`.
+    /// @notice Flattens `steps[]` into a bare `RelayStep[] {kind, items[] {from,to,data,value,chainId}}`.
+    /// @dev Root is the bare array that `prepareCallback` decodes
+    /// (`abi.decode(body, (RelayStep[]))`); each item's transaction is the
+    /// five-field `data` tuple directly (no intermediate wrapper tuple).
     function _stepsTransform() private pure returns (ResponseTransform memory transform) {
-        JsonAbiNode[] memory nodes = new JsonAbiNode[](11);
-        nodes[0] = _node(JsonAbiNodeType.TUPLE, "", 1, 0);
+        JsonAbiNode[] memory nodes = new JsonAbiNode[](10);
         // MAX_STEPS and MAX_ITEMS_PER_STEP are small literals; the uint32 cast cannot truncate.
         // forge-lint: disable-next-line(unsafe-typecast)
-        nodes[1] = _node(JsonAbiNodeType.ARRAY, "/steps", 1, uint32(MAX_STEPS));
-        nodes[2] = _node(JsonAbiNodeType.TUPLE, "", 2, 0);
-        nodes[3] = _node(JsonAbiNodeType.STRING, "/kind", 0, 0);
+        nodes[0] = _node(JsonAbiNodeType.ARRAY, "/steps", 1, uint32(MAX_STEPS));
+        nodes[1] = _node(JsonAbiNodeType.TUPLE, "", 2, 0);
+        nodes[2] = _node(JsonAbiNodeType.STRING, "/kind", 0, 0);
         // forge-lint: disable-next-line(unsafe-typecast)
-        nodes[4] = _node(JsonAbiNodeType.ARRAY, "/items", 1, uint32(MAX_ITEMS_PER_STEP));
-        nodes[5] = _node(JsonAbiNodeType.TUPLE, "", 1, 0);
-        nodes[6] = _node(JsonAbiNodeType.TUPLE, "/data", 5, 0);
-        nodes[7] = _node(JsonAbiNodeType.ADDRESS, "/from", 0, 0);
-        nodes[8] = _node(JsonAbiNodeType.ADDRESS, "/to", 0, 0);
-        nodes[9] = _node(JsonAbiNodeType.BYTES, "/data", 0, 0);
-        nodes[10] = _node(JsonAbiNodeType.UINT256_DECIMAL, "/value", 0, 0);
-        nodes[11] = _node(JsonAbiNodeType.UINT256_DECIMAL, "/chainId", 0, 0);
+        nodes[3] = _node(JsonAbiNodeType.ARRAY, "/items", 1, uint32(MAX_ITEMS_PER_STEP));
+        nodes[4] = _node(JsonAbiNodeType.TUPLE, "/data", 5, 0);
+        nodes[5] = _node(JsonAbiNodeType.ADDRESS, "/from", 0, 0);
+        nodes[6] = _node(JsonAbiNodeType.ADDRESS, "/to", 0, 0);
+        nodes[7] = _node(JsonAbiNodeType.BYTES, "/data", 0, 0);
+        nodes[8] = _node(JsonAbiNodeType.UINT256_DECIMAL, "/value", 0, 0);
+        nodes[9] = _node(JsonAbiNodeType.UINT256_DECIMAL, "/chainId", 0, 0);
         transform =
             ResponseTransform({kind: ResponseTransformKind.JSON_ABI, statusFrom: 200, statusTo: 299, nodes: nodes});
     }

@@ -146,7 +146,7 @@ const examples = [
     name: "Relay",
     chainId: "8453",
     rpcUrl: baseRpcUrl,
-    address: "0x37A3adb94423358EaaD8Ae3aF9c721fDD95cE04B",
+    address: "0xf68aae5b79864ecfc08f17b213d6ee9973bda19d",
     externalOrigin: "https://api.relay.link",
   },
 ] as const;

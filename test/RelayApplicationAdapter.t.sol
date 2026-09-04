@@ -46,6 +46,13 @@ contract RelayApplicationAdapterTest {
         // A valid prepare() must not resolve locally: it exits through ExternalRequest.
         require(!success, "prepare must exit via ExternalRequest");
         require(data.length >= 4, "expected a custom-error revert payload");
+        // Guard the regression where building the steps transform wrote an
+        // out-of-bounds transform node and reverted with a panic (0x32) instead.
+        bytes4 selector;
+        assembly {
+            selector := mload(add(data, 0x20))
+        }
+        require(selector != 0x4e487b71, "prepare must not revert with a panic");
     }
 
     function testPrepareCallbackFlattensApproveThenDeposit() external view {
