@@ -2,6 +2,10 @@
 
 This document records implementation findings that affect the experimental interfaces and specifications. It must not contain credentials, personal information, or privately funded endpoint details.
 
+## 2026-09-14
+
+- Added machine-discoverable `<meta>` tags to the web console document head (`web/index.html`) mirroring the About nav links, so an agent that issues a plain `GET /` finds the GitHub repository, the published agent skill, and the two ERC drafts without executing JavaScript. The agent-skill tag points at the published skill file (`/.well-known/skills/onchain-app-interfaces/onchain-app-interfaces.md`), verified to serve as `text/markdown` from the Pages build output.
+
 ## 2026-09-03
 
 - Fixed the `relay.bridge.exactInput` transform, which was broken at two levels (and had never run live because a panic fired first). The defects in `RelayApplicationAdapter._stepsTransform` were (1) a wrapping `TUPLE` root that emitted `abi.encode(tuple{array,...})` instead of the bare `RelayStep[]` that `prepareCallback` decodes, and (2) an extra 1-field tuple wrapping each item's five-field `/data` tuple. The root is now the bare `ARRAY "/steps"` and each item's transaction is the five-field `data` tuple directly (10 nodes). Verified end-to-end on an Anvil Base fork with a live `/quote/v2` to `api.relay.link`: `resolveCall` now carries `prepare` through the `ExternalRequest` continuation and decodes a correct `PreparedAction` — one origin-chain call to depository `0x4cD0…`, value `1000000000000000`, recipient calldata, plus `validUntil`. Note: the adapter I deployed earlier (`0x1E80534C558Cb50567cF77b5EC7271c46d76633e`) was built from the still-broken transform and must be redeployed with this fix to actually work.
