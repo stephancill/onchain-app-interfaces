@@ -73,6 +73,10 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--rpc-url")
     parser.add_argument("--allow-origin", action="append", default=[])
     parser.add_argument(
+        "--ipfs-gateway",
+        help="HTTPS gateway origin for IPFS metadata; also authorize with --allow-origin",
+    )
+    parser.add_argument(
         "--requirement-env", action="append", default=[], metavar="KEY=ENV_VAR"
     )
     parser.add_argument("--max-requests", type=int, default=4)
@@ -112,6 +116,7 @@ def run(argv: Sequence[str] | None = None) -> int:
         max_response_bytes=arguments.max_response_bytes,
         max_header_bytes=arguments.max_header_bytes,
         timeout=arguments.timeout,
+        ipfs_gateway=arguments.ipfs_gateway,
     )
     discovery = client.discover()
     if arguments.command == "discover":
@@ -132,6 +137,8 @@ def run(argv: Sequence[str] | None = None) -> int:
                 "adapter": client.adapter,
                 "rpcUrl": client.rpc.url,
                 "block": discovery["block"],
+                "contractURI": discovery["contractURI"],
+                "metadata": discovery["metadata"],
                 **client.query(capability=capability, values=values, block=block),
             }
         else:
@@ -140,6 +147,8 @@ def run(argv: Sequence[str] | None = None) -> int:
                 "adapter": client.adapter,
                 "rpcUrl": client.rpc.url,
                 "block": discovery["block"],
+                "contractURI": discovery["contractURI"],
+                "metadata": discovery["metadata"],
                 **client.prepare(
                     capability=capability,
                     account=arguments.account,

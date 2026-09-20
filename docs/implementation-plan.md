@@ -13,6 +13,7 @@ Both capabilities use External Request when computation requires client-mediated
 
 Completed:
 
+- required ERC-7572 application self-description in the specification, all reference adapters, TypeScript/Python clients, skill, and console; the four catalog adapters have metadata-capable, source-verified Base replacement deployments, and the updated console/catalog/skill are published on Pages;
 - experimental External Request ABI and normative draft;
 - experimental Application Actions and Application Queries ABIs;
 - TypeScript External Request continuation runtime;

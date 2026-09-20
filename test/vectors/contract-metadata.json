@@ -1,0 +1,42 @@
+{
+  "valid": [
+    {
+      "label": "ERC-7572 inline UTF-8",
+      "uri": "data:application/json;utf8,{\"name\":\"Café\",\"description\":\"Read positions.\",\"category\":\"lending\"}",
+      "metadata": { "name": "Café", "description": "Read positions.", "category": "lending" }
+    },
+    {
+      "label": "percent encoding and charset",
+      "uri": "data:application/json;charset=utf-8,%7B%22name%22%3A%22Caf%C3%A9%22%2C%22description%22%3A%22A%20%2B%20B%20%231%20at%20100%25.%22%7D",
+      "metadata": { "name": "Café", "description": "A + B #1 at 100%." }
+    },
+    {
+      "label": "Base64",
+      "uri": "data:application/json;base64,eyJuYW1lIjoiRXhhbXBsZSIsImRlc2NyaXB0aW9uIjoiQSByZWFkLW9ubHkgYXBwLiJ9",
+      "metadata": { "name": "Example", "description": "A read-only app." }
+    },
+    {
+      "label": "standard optional fields and extensions",
+      "uri": "data:application/json,{\"name\":\"Example\",\"description\":\"Read positions.\",\"symbol\":\"EX\",\"image\":\"ipfs://example/image.png\",\"external_link\":\"https://example.com\",\"collaborators\":[\"0x123\"],\"extension\":{\"foo\":true}}",
+      "metadata": { "name": "Example", "description": "Read positions.", "symbol": "EX", "image": "ipfs://example/image.png", "external_link": "https://example.com", "collaborators": ["0x123"], "extension": { "foo": true } }
+    }
+  ],
+  "invalid": [
+    { "label": "empty URI", "uri": "" },
+    { "label": "missing description", "uri": "data:application/json,{\"name\":\"Example\"}" },
+    { "label": "empty name", "uri": "data:application/json,{\"name\":\"\",\"description\":\"Read\"}" },
+    { "label": "whitespace description", "uri": "data:application/json,{\"name\":\"Example\",\"description\":\" \\n\\t\"}" },
+    { "label": "wrong field type", "uri": "data:application/json,{\"name\":42,\"description\":\"Read\"}" },
+    { "label": "invalid optional field", "uri": "data:application/json,{\"name\":\"Example\",\"description\":\"Read\",\"image\":42}" },
+    { "label": "invalid collaborators", "uri": "data:application/json,{\"name\":\"Example\",\"description\":\"Read\",\"collaborators\":[42]}" },
+    { "label": "array document", "uri": "data:application/json,[]" },
+    { "label": "malformed JSON", "uri": "data:application/json,{" },
+    { "label": "wrong media type", "uri": "data:text/html,{}" },
+    { "label": "unsupported charset", "uri": "data:application/json;charset=latin1,{}" },
+    { "label": "invalid percent escape", "uri": "data:application/json,%GG" },
+    { "label": "invalid UTF-8", "uri": "data:application/json,%FF" },
+    { "label": "invalid Base64", "uri": "data:application/json;base64,!" },
+    { "label": "noncanonical Base64", "uri": "data:application/json;base64,AB==" },
+    { "label": "invalid Base64 UTF-8", "uri": "data:application/json;base64,/w==" }
+  ]
+}

@@ -6,7 +6,16 @@ Experimental reference adapter for the Base mainnet Aerodrome volatile WETH/USDC
 
 The implementation is `contracts/adapters/AerodromeApplicationAdapter.sol`.
 
+## Current Base Deployment
+
+- Chain ID: `8453`.
+- Adapter: [`0x1b64ccafc9669dc920bee37fffb999053ab6bee0`](https://basescan.org/address/0x1b64ccafc9669dc920bee37fffb999053ab6bee0#code).
+- Deployment transaction: `0x800e7971fa4b376b52b7684db111b5d1f09fcfab53aff2ca6653a02b0efc6b47` (block `51561014`, 2026-09-20).
+- Runtime size: 9,212 bytes; required ERC-7572 metadata is inline.
+
 ## Purpose
+
+`contractURI()` returns inline ERC-7572 metadata named **Aerodrome WETH/USDC**, describing this pool-specific interface. This source implements the required application metadata profile in `spec/METADATA.md`; earlier deployments need replacement to expose it.
 
 This adapter is the fully onchain control for the Application Interface prototype. It demonstrates semantic queries and action preparation using only current EVM state. It never invokes External Request.
 

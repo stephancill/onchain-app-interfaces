@@ -81,6 +81,10 @@ contract KyberSwapApplicationAdapter is IApplicationActions {
         apiBaseUrl = apiBaseUrl_;
     }
 
+    function contractURI() external pure returns (string memory) {
+        return 'data:application/json;utf8,{"name":"KyberSwap Base WETH/USDC","description":"Prepare exact-input WETH/USDC swaps on Base through KyberSwap route discovery and construction, with explicit minimum output and slippage constraints.","external_link":"https://kyberswap.com"}';
+    }
+
     function actions() external pure returns (bytes32[] memory actionIds) {
         actionIds = new bytes32[](1);
         actionIds[0] = SWAP_ACTION;

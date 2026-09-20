@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "updatedAt": "2026-09-20",
+  "interfaces": [
+    {
+      "chainId": 8453,
+      "address": "0x1b64ccafc9669dc920bee37fffb999053ab6bee0",
+      "name": "Aerodrome",
+      "category": "dex",
+      "keywords": ["swap", "liquidity", "amm", "aerodrome"],
+      "verified": true,
+      "externalOrigins": []
+    },
+    {
+      "chainId": 8453,
+      "address": "0xd8e7a909318c36bc17a5eee6f2f8f44c848f29f3",
+      "name": "Moonwell",
+      "category": "lending",
+      "keywords": ["lend", "supply", "borrow", "collateral", "moonwell"],
+      "verified": true,
+      "externalOrigins": ["https://api.moonwell.fi"]
+    },
+    {
+      "chainId": 8453,
+      "address": "0x300030fea92f4281894aefde5f2261fe12c0afdb",
+      "name": "Avantis",
+      "category": "perps",
+      "keywords": ["perps", "trade", "positions", "avantis"],
+      "verified": true,
+      "externalOrigins": [
+        "https://core.avantisfi.com",
+        "https://tx-builder.avantisfi.com"
+      ]
+    },
+    {
+      "chainId": 8453,
+      "address": "0x4ab46c803b53ef51e9813c512de7ccef6214ea92",
+      "name": "Relay",
+      "category": "bridge",
+      "keywords": ["bridge", "swap", "relay", "cross-chain"],
+      "verified": true,
+      "externalOrigins": ["https://api.relay.link"]
+    }
+  ]
+}

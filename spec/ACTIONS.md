@@ -1,4 +1,4 @@
-# Application Actions v0
+# Application Actions v0.1
 
 ## Status
 
@@ -13,6 +13,8 @@ Application Actions publishes application-level actions and prepares a selected 
 ## Interface
 
 The experimental interface is defined by `contracts/IApplicationActions.sol`.
+
+An application adapter MUST implement Application Queries, Application Actions, or both and MUST expose ERC-7572 metadata as specified in `spec/METADATA.md`. Both Solidity interfaces inherit `IERC7572`.
 
 ## Action Discovery
 
@@ -47,7 +49,7 @@ Some protocols report business failure through successful EVM return data rather
 ## Open Questions
 
 - Descriptor serialization and semantic types.
-- Application-adapter discovery and authenticity.
+- Finding application-adapter addresses and establishing authenticity.
 - Cross-chain call representation.
 - Prepared-action validation beyond `validUntil`.
 - Required call return values and postconditions.

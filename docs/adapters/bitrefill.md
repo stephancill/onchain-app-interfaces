@@ -6,6 +6,8 @@ Experimental query-only adapter implemented in `contracts/adapters/BitrefillAppl
 
 ## Capabilities
 
+`contractURI()` returns inline ERC-7572 metadata named **Bitrefill Catalog**, describing authenticated, read-only product discovery. It implements the required profile in `spec/METADATA.md`.
+
 - `bitrefill.catalog.search` searches gift cards, eSIMs, or top-ups.
 - `bitrefill.product.detail` retrieves product details.
 

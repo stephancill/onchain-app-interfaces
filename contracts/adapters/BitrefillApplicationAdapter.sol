@@ -53,6 +53,10 @@ contract BitrefillApplicationAdapter is IApplicationQueries {
         apiBaseUrl = apiBaseUrl_;
     }
 
+    function contractURI() external pure returns (string memory) {
+        return 'data:application/json;utf8,{"name":"Bitrefill Catalog","description":"Search the Bitrefill gift-card, eSIM, and top-up catalog and read product details using an existing access token. This adapter is read-only.","external_link":"https://bitrefill.com"}';
+    }
+
     function queries() external pure returns (bytes32[] memory queryIds) {
         queryIds = new bytes32[](2);
         queryIds[0] = SEARCH_QUERY;

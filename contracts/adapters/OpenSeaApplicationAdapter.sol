@@ -66,6 +66,10 @@ contract OpenSeaApplicationAdapter is IApplicationQueries, IApplicationActions {
         seaDrop = seaDrop_;
     }
 
+    function contractURI() external pure returns (string memory) {
+        return 'data:application/json;utf8,{"name":"OpenSea Base","description":"Read OpenSea collection statistics and prepare public SeaDrop mints on Base using an OpenSea API key.","external_link":"https://opensea.io"}';
+    }
+
     function queries() external pure returns (bytes32[] memory queryIds) {
         queryIds = new bytes32[](1);
         queryIds[0] = COLLECTION_STATS_QUERY;

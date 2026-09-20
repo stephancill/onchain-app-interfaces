@@ -36,6 +36,10 @@ contract ApplicationAdapterFixture is IApplicationQueries, IApplicationActions {
         baseUrl = baseUrl_;
     }
 
+    function contractURI() external pure returns (string memory) {
+        return 'data:application/json;utf8,{"name":"Application Fixture","description":"Exercise semantic reads, action preparation, and External Request continuations on a local test chain."}';
+    }
+
     function queries() external pure returns (bytes32[] memory queryIds) {
         queryIds = new bytes32[](7);
         queryIds[0] = ONCHAIN_QUERY;

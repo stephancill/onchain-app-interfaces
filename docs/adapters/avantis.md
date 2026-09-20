@@ -6,7 +6,18 @@ Experimental comprehensive adapter for Avantis v2 perpetual markets and position
 
 The implementation is `contracts/adapters/AvantisApplicationAdapter.sol`.
 
+## Current Base Deployment
+
+- Chain ID: `8453`.
+- Adapter: [`0x300030fea92f4281894aefde5f2261fe12c0afdb`](https://basescan.org/address/0x300030fea92f4281894aefde5f2261fe12c0afdb#code).
+- Descriptor companion: `0x3CAe35596c22E6Be89109E0daa4D3032fC56B92d`.
+- Deployment transaction: `0x70f69dc1b6d96469252ed1bebc3e661346e9653c9bafad633cb835121c36b288` (block `51561131`, 2026-09-20).
+- Constructor API origin: `https://tx-builder.avantisfi.com`.
+- Runtime size: 23,123 bytes; required ERC-7572 metadata is inline.
+
 ## Scope
+
+`contractURI()` returns inline ERC-7572 metadata named **Avantis Base**, describing this trading and position-management interface. It implements `spec/METADATA.md` independently of the existing `avantis.meta` service query. Earlier deployments need replacement to expose it.
 
 The adapter exposes five queries and eight actions through one discoverable address. It follows the current Avantis v2 tx-builder OpenAPI rather than the older unversioned routes in Base MCP plugin v0.2.
 

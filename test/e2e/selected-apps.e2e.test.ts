@@ -24,6 +24,8 @@ import {
   decodeDescriptorResult,
   encodeDescriptorParameters,
   parseApplicationDescriptor,
+  contractMetadataSchema,
+  readContractMetadata,
   resolveCall,
   type ApplicationDescriptor,
 } from "../../src/client/index.ts";
@@ -77,6 +79,7 @@ let bitrefillAddress: Address;
 let aerodromeAddress: Address;
 let moonwellAddress: Address;
 let avantisAddress: Address;
+let relayAddress: Address;
 let kyberAbi: Abi;
 let openSeaAbi: Abi;
 let bitrefillAbi: Abi;
@@ -725,6 +728,18 @@ beforeAll(async () => {
     bytecode: avantis.bytecode.object as Hex,
     args: [serviceOrigin],
   });
+  const relay = artifactSchema.parse(
+    await Bun.file(
+      "out/RelayApplicationAdapter.sol/RelayApplicationAdapter.json",
+    ).json(),
+  );
+  relayAddress = await deploy({
+    walletClient,
+    publicClient,
+    abi: relay.abi as Abi,
+    bytecode: relay.bytecode.object as Hex,
+    args: [serviceOrigin],
+  });
 }, 30_000);
 
 afterAll(() => {
@@ -735,6 +750,80 @@ afterAll(() => {
 });
 
 describe("selected application adapters", () => {
+  test("discovers all seven adapters from chain and address through both clients", async () => {
+    const client = createPublicClient({
+      chain: foundry,
+      transport: http(rpcUrl),
+    });
+    for (const adapter of [
+      {
+        address: aerodromeAddress,
+        name: "Aerodrome WETH/USDC",
+        queries: 3,
+        actions: 1,
+      },
+      {
+        address: moonwellAddress,
+        name: "Moonwell Base USDC",
+        queries: 3,
+        actions: 1,
+      },
+      { address: avantisAddress, name: "Avantis Base", queries: 5, actions: 8 },
+      { address: relayAddress, name: "Relay", queries: 1, actions: 1 },
+      {
+        address: kyberAddress,
+        name: "KyberSwap Base WETH/USDC",
+        queries: 0,
+        actions: 1,
+      },
+      { address: openSeaAddress, name: "OpenSea Base", queries: 1, actions: 1 },
+      {
+        address: bitrefillAddress,
+        name: "Bitrefill Catalog",
+        queries: 2,
+        actions: 0,
+      },
+    ]) {
+      const application = await readContractMetadata({
+        address: adapter.address,
+        ethCall: async (call) => (await client.call(call)).data ?? "0x",
+      });
+      expect(application.metadata.name).toBe(adapter.name);
+      const process = Bun.spawn(
+        [
+          "python3",
+          "skills/onchain-app-interfaces/scripts/adapter.py",
+          "discover",
+          "--chain-id",
+          String(foundry.id),
+          "--rpc-url",
+          rpcUrl,
+          "--adapter",
+          adapter.address,
+        ],
+        { stdout: "pipe", stderr: "pipe" },
+      );
+      const [stdout, stderr, exitCode] = await Promise.all([
+        new Response(process.stdout).text(),
+        new Response(process.stderr).text(),
+        process.exited,
+      ]);
+      if (exitCode !== 0) throw new Error(stderr);
+      const discovered = z
+        .object({
+          metadata: contractMetadataSchema,
+          contractURI: z.string(),
+          queries: z.array(z.unknown()),
+          actions: z.array(z.unknown()),
+        })
+        .parse(JSON.parse(stdout));
+      expect(discovered.metadata).toEqual(application.metadata);
+      expect(discovered.contractURI).toBe(application.uri);
+      expect(discovered.queries).toHaveLength(adapter.queries);
+      expect(discovered.actions).toHaveLength(adapter.actions);
+    }
+  }, 30_000);
+
   test("validates every published descriptor", async () => {
     for (const capability of [
       [

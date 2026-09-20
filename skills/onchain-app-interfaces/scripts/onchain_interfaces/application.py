@@ -15,6 +15,7 @@ from .descriptor import (
 )
 from .external import resolve_call
 from .keccak import to_checksum_address
+from .metadata import resolve_contract_metadata
 from .rpc import RpcClient, RpcError
 
 _ADDRESS = re.compile(r"^0x[0-9a-fA-F]{40}$")
@@ -68,6 +69,7 @@ class ApplicationClient:
         max_response_bytes: int = 1_048_576,
         max_header_bytes: int = 65_536,
         timeout: float = 30.0,
+        ipfs_gateway: str | None = None,
     ) -> None:
         if not isinstance(chain_id, int) or isinstance(chain_id, bool) or chain_id <= 0:
             raise ValueError("Chain ID must be a positive integer")
@@ -87,6 +89,7 @@ class ApplicationClient:
         self.max_response_bytes = max_response_bytes
         self.max_header_bytes = max_header_bytes
         self.timeout = timeout
+        self.ipfs_gateway = ipfs_gateway
 
     @staticmethod
     def _missing_requirement(requirement: Mapping[str, Any]) -> str:
@@ -144,6 +147,31 @@ class ApplicationClient:
 
     def discover(self) -> dict[str, Any]:
         block = self._verify_target()
+        try:
+            raw_uri = self._plain_call(
+                name="contractURI", parameters=_NO_PARAMETERS, values=(), block=block
+            )
+        except RpcError as error:
+            raise RuntimeError(
+                "Required contractURI() call failed; application metadata could not be read"
+            ) from error
+        try:
+            uri = decode_abi(
+                parameters=({"name": "uri", "type": "string"},),
+                data=raw_uri,
+                named=True,
+            )["uri"]
+        except ValueError as error:
+            raise ValueError(
+                "Invalid contractURI() return: required application metadata is missing or malformed"
+            ) from error
+        metadata = resolve_contract_metadata(
+            uri=uri,
+            allowed_origins=self.allowed_origins,
+            ipfs_gateway=self.ipfs_gateway,
+            max_header_bytes=self.max_header_bytes,
+            timeout=self.timeout,
+        )
         unsupported = []
         try:
             query_ids = self._plain_call(
@@ -176,6 +204,8 @@ class ApplicationClient:
             "adapter": self.adapter,
             "rpcUrl": self.rpc.url,
             "block": int(block, 16),
+            "contractURI": uri,
+            "metadata": metadata,
             "queries": queries,
             "actions": actions,
             "unsupported": unsupported,

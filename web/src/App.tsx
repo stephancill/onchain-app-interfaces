@@ -27,8 +27,10 @@ import {
   decodeDescriptorResult,
   encodeDescriptorParameters,
   parseApplicationDescriptor,
+  readContractMetadata,
   resolveCall,
   type ApplicationDescriptor,
+  type ContractMetadata,
   type DescriptorField,
   type QueryDescriptor,
 } from "../../src/client/index.ts";
@@ -124,21 +126,21 @@ const examples = [
     name: "Aerodrome",
     chainId: "8453",
     rpcUrl: baseRpcUrl,
-    address: "0x9c952d2530e8e94512f14fe6987fccb5d8a3b6e2",
+    address: "0x1b64ccafc9669dc920bee37fffb999053ab6bee0",
     externalOrigin: "",
   },
   {
     name: "Moonwell",
     chainId: "8453",
     rpcUrl: baseRpcUrl,
-    address: "0xf5c03ce6356d9dafe49f3254b38f7e747958b0c0",
+    address: "0xd8e7a909318c36bc17a5eee6f2f8f44c848f29f3",
     externalOrigin: "https://api.moonwell.fi",
   },
   {
     name: "Avantis",
     chainId: "8453",
     rpcUrl: baseRpcUrl,
-    address: "0xfa5725214419f9688133841f67e10c4783d17b26",
+    address: "0x300030fea92f4281894aefde5f2261fe12c0afdb",
     externalOrigin:
       "https://core.avantisfi.com\nhttps://tx-builder.avantisfi.com",
   },
@@ -146,7 +148,7 @@ const examples = [
     name: "Relay",
     chainId: "8453",
     rpcUrl: baseRpcUrl,
-    address: "0xf68aae5b79864ecfc08f17b213d6ee9973bda19d",
+    address: "0x4ab46c803b53ef51e9813c512de7ccef6214ea92",
     externalOrigin: "https://api.relay.link",
   },
 ] as const;
@@ -157,6 +159,9 @@ type Capability = {
   descriptor: ApplicationDescriptor;
 };
 type LoadedInterface = {
+  contractURI: string;
+  metadata: ContractMetadata;
+  block: bigint;
   queries: Capability[];
   actions: Capability[];
   unsupported: string[];
@@ -535,16 +540,45 @@ function clientFor(target: Target) {
   });
 }
 
-async function loadInterface(target: Target): Promise<LoadedInterface> {
+async function loadInterface(parameters: {
+  target: Target;
+  allowedOrigins: Set<string>;
+  ipfsGateway?: string;
+}): Promise<LoadedInterface> {
+  const { target } = parameters;
   const client = clientFor(target);
   const address = getAddress(target.address);
-  const code = await client.getCode({ address });
+  const blockNumber = await client.getBlockNumber();
+  const code = await client.getCode({ address, blockNumber });
   if (code === undefined || code === "0x")
     throw new Error("Adapter address has no bytecode");
 
+  const application = await readContractMetadata({
+    address,
+    ethCall: async (call) =>
+      (await client.call({ ...call, blockNumber })).data ?? "0x",
+    ipfsGateway: parameters.ipfsGateway,
+    authorizeRequest: ({ completedRequest }) => {
+      if (!parameters.allowedOrigins.has(new URL(completedRequest.url).origin))
+        throw new Error(
+          "Metadata origin is not allowed; add it to Allowed origins",
+        );
+    },
+  });
+
   const [queryIdsResult, actionIdsResult] = await Promise.allSettled([
-    client.readContract({ address, abi: queryAbi, functionName: "queries" }),
-    client.readContract({ address, abi: actionAbi, functionName: "actions" }),
+    client.readContract({
+      address,
+      abi: queryAbi,
+      functionName: "queries",
+      blockNumber,
+    }),
+    client.readContract({
+      address,
+      abi: actionAbi,
+      functionName: "actions",
+      blockNumber,
+    }),
   ]);
   if (
     queryIdsResult.status === "rejected" &&
@@ -566,6 +600,7 @@ async function loadInterface(target: Target): Promise<LoadedInterface> {
           address,
           abi: queryAbi,
           functionName: "queryDescriptor",
+          blockNumber,
           args: [id],
         });
         const descriptor = parseApplicationDescriptor(value);
@@ -580,6 +615,7 @@ async function loadInterface(target: Target): Promise<LoadedInterface> {
           address,
           abi: actionAbi,
           functionName: "actionDescriptor",
+          blockNumber,
           args: [id],
         });
         const descriptor = parseApplicationDescriptor(value);
@@ -594,7 +630,14 @@ async function loadInterface(target: Target): Promise<LoadedInterface> {
     ...(queryIdsResult.status === "rejected" ? ["Application Queries"] : []),
     ...(actionIdsResult.status === "rejected" ? ["Application Actions"] : []),
   ];
-  return { queries, actions, unsupported };
+  return {
+    queries,
+    actions,
+    unsupported,
+    contractURI: application.uri,
+    metadata: application.metadata,
+    block: blockNumber,
+  };
 }
 
 function parseOrigins(value: string): Set<string> {
@@ -979,6 +1022,7 @@ function App() {
     rpcUrl: parseAsString.withDefault(baseRpcUrl),
     address: parseAsString.withDefault(examples[0].address),
     origins: parseAsString.withDefault(""),
+    ipfsGateway: parseAsString.withDefault(""),
     active: parseAsBoolean.withDefault(false),
   });
   const [targetError, setTargetError] = useState<string>();
@@ -990,8 +1034,18 @@ function App() {
       : undefined;
 
   const interfaceQuery = useQuery({
-    queryKey: ["application-interface", target],
-    queryFn: () => loadInterface(target!),
+    queryKey: [
+      "application-interface",
+      target,
+      consoleState.origins,
+      consoleState.ipfsGateway,
+    ],
+    queryFn: () =>
+      loadInterface({
+        target: target!,
+        allowedOrigins: parseOrigins(consoleState.origins),
+        ipfsGateway: consoleState.ipfsGateway || undefined,
+      }),
     enabled: target !== undefined,
     retry: false,
   });
@@ -1197,28 +1251,9 @@ function App() {
             Load interface
           </button>
         </form>
-        {(targetError || interfaceQuery.error) && (
-          <p className="text-red-600">
-            {targetError ?? errorMessage(interfaceQuery.error)}
-          </p>
-        )}
-        {interfaceQuery.isFetching && (
-          <p className="text-sm opacity-60">
-            Reading bytecode, capabilities, and descriptors...
-          </p>
-        )}
-      </section>
-
-      {loaded && (
-        <>
-          <section className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
-            <div className="col-span-2 grid gap-2 max-md:col-span-1">
-              <h2 className="text-2xl font-bold">External Request policy</h2>
-              <p>
-                Only needed for capabilities that continue through HTTP. Values
-                stay in this page and are never sent onchain.
-              </p>
-            </div>
+        <details>
+          <summary>Metadata and HTTP settings</summary>
+          <div className="grid gap-3 py-3">
             <label className="grid gap-3">
               Allowed origins (one per line)
               <textarea
@@ -1231,6 +1266,61 @@ function App() {
                 spellCheck={false}
               />
             </label>
+            <label className="grid gap-3">
+              IPFS gateway origin (optional)
+              <input
+                value={consoleState.ipfsGateway}
+                onChange={(event) =>
+                  void setConsoleState({ ipfsGateway: event.target.value })
+                }
+                placeholder="https://ipfs.io"
+                spellCheck={false}
+              />
+            </label>
+            <p>
+              Inline contract metadata needs no HTTP settings. Remote metadata
+              and External Requests use the allowed origins above. Authorize the
+              gateway origin to resolve IPFS metadata.
+            </p>
+          </div>
+        </details>
+        {(targetError || interfaceQuery.error) && (
+          <p className="text-red-600">
+            {targetError ?? errorMessage(interfaceQuery.error)}
+          </p>
+        )}
+        {interfaceQuery.isFetching && (
+          <p className="text-sm opacity-60">
+            Reading bytecode, application metadata, capabilities, and
+            descriptors...
+          </p>
+        )}
+      </section>
+
+      {loaded && (
+        <>
+          <section className="grid gap-3">
+            <h2 className="text-2xl font-bold">{loaded.metadata.name}</h2>
+            <p className="whitespace-pre-wrap">{loaded.metadata.description}</p>
+            <p>
+              Chain {target!.chainId} · <code>{target!.address}</code> · Block{" "}
+              {loaded.block.toString()}
+            </p>
+            <details>
+              <summary>Contract-provided metadata</summary>
+              <pre className="whitespace-pre-wrap break-all">
+                {loaded.contractURI}
+              </pre>
+            </details>
+          </section>
+          <section className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
+            <div className="col-span-2 grid gap-2 max-md:col-span-1">
+              <h2 className="text-2xl font-bold">External Request policy</h2>
+              <p>
+                Only needed for capabilities that continue through HTTP. Values
+                stay in this page and are never sent onchain.
+              </p>
+            </div>
             <label className="grid gap-3">
               Requirement values (JSON)
               <textarea

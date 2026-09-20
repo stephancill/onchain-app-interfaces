@@ -2,6 +2,7 @@
 
 Experimental standards and reference implementations for:
 
+- discovering application names and descriptions through required ERC-7572 contract metadata;
 - discovering and executing application-level semantic queries;
 - discovering application-level actions and preparing them as EVM call bundles;
 - continuing EVM calls through client-mediated external HTTP requests.
@@ -17,6 +18,7 @@ OpenCode discovers the skill locally through this repository's `opencode.json`. 
 Pre-number ERC working papers live in [`docs/eips/`](docs/eips/). They are formatted for eventual submission but remain subordinate to the experimental specifications until the ABIs are stabilized.
 
 - `spec/QUERIES.md` defines semantic application reads.
+- `spec/METADATA.md` defines required ERC-7572 self-description and application conformance.
 - `spec/ACTIONS.md` defines semantic action preparation.
 - `spec/EXTERNAL_REQUEST.md` defines their shared external continuation mechanism.
 - `spec/DESCRIPTORS.md` defines the experimental shared descriptor profile.
@@ -36,6 +38,8 @@ Cross-application evidence and proposed standards changes are consolidated in [`
 ## Status
 
 All interfaces are experimental and may change based on implementation findings.
+
+The v0.1 conformance revision requires `contractURI()` with nonempty `name` and `description`, plus queries, actions, or both. All seven reference adapters return inline JSON metadata. The Aerodrome, Moonwell, Avantis, and Relay Base examples were redeployed with metadata on 2026-09-20; their current addresses are in the adapter documentation and `web/public/interfaces.json`. Earlier deployments without metadata do not conform to this revision.
 
 ## Development
 
@@ -75,6 +79,8 @@ const result = await resolveCall({
 
 `stringifyJson` serializes decoded values with bigints represented as decimal strings.
 
+`readContractMetadata({ address, ethCall, ...options })` reads and validates required ERC-7572 metadata and returns `{ uri, metadata }`. `resolveContractMetadata({ uri, ...options })` resolves an already-read URI. Inline UTF-8, percent-encoded, and Base64 JSON data URIs are supported. Remote HTTPS retrieval requires `authorizeRequest`; IPFS additionally requires an `ipfsGateway` HTTPS origin. The same origin, destination, timeout, and response-limit policy applies to remote metadata retrieval as to other client-mediated HTTP. Metadata documents are limited to 64 KiB.
+
 ## Skill Client
 
 The bundled skill client can run from any directory and has no package-install step:
@@ -82,10 +88,12 @@ The bundled skill client can run from any directory and has no package-install s
 ```sh
 python3 skills/onchain-app-interfaces/scripts/adapter.py discover \
   --chain-id 8453 \
-  --adapter 0xfa5725214419f9688133841f67e10c4783d17b26
+  --adapter 0x300030fea92f4281894aefde5f2261fe12c0afdb
 ```
 
 Its `query` and `prepare` commands accept descriptor values from a JSON file or stdin, derive selectors from canonical signatures, resolve recursive External Requests, and emit BigInt-safe JSON. External HTTP is denied unless its exact HTTPS origin is passed with `--allow-origin`; DNS answers must all be public, and the connection is pinned to a validated address while TLS continues to verify the original hostname. The client never executes prepared calls.
+
+All commands validate required application metadata and include `contractURI` and `metadata` in their output. Authorize remote metadata origins with `--allow-origin`; resolve IPFS metadata with `--ipfs-gateway https://<gateway-host>` plus its allowed origin. Inline reference-adapter metadata requires only RPC access.
 
 ## Web Console
 

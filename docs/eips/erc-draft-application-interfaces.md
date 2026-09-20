@@ -7,11 +7,14 @@ status: Draft
 type: Standards Track
 category: ERC
 created: 2026-08-25
+requires: 7572
 ---
 
 ## Abstract
 
 This proposal defines separate optional contract interfaces for application-level queries and actions. Queries return encoded semantic application data. Actions compile semantic parameters for an explicit account into an ordered bundle of EVM calls with an optional expiration time. Both capabilities use implementation-defined descriptors so clients can determine parameter and result encodings without adding one contract function for every application operation.
+
+Every conforming adapter also exposes ERC-7572 contract metadata, including a name and description. Starting from a chain ID and address, clients can discover what the interface is and what it can do.
 
 ## Motivation
 
@@ -27,13 +30,31 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 
 ### Terminology
 
-An **adapter** is a contract implementing one or both interfaces in this proposal.
+An **adapter** is a contract implementing the required contract metadata interface and one or both query/action interfaces in this proposal.
 
 A **query** is an application-level semantic read. It may aggregate or normalize contract state, indexed history, external data, or application-specific computation.
 
 An **action** is an application-level operation that can be prepared as one or more EVM calls. Preparation does not execute or authorize those calls.
 
 A **descriptor** is an encoded document that determines how a capability's semantic parameters and, for queries, semantic result are encoded.
+
+### Required Contract Metadata
+
+An adapter MUST implement [ERC-7572](./eip-7572.md):
+
+```solidity
+interface IERC7572 {
+    function contractURI() external view returns (string memory);
+
+    event ContractURIUpdated();
+}
+```
+
+The returned URI MUST reference a UTF-8 JSON object conforming to the ERC-7572 schema. In addition to ERC-7572's required `name`, this proposal requires `description`. Both fields MUST be strings containing at least one non-whitespace character and MUST describe the application interface exposed by the adapter, including its supported scope. Other ERC-7572 fields and additional properties MAY be included.
+
+Adapters MAY use inline JSON data URIs or remote resources. Clients MUST support UTF-8 JSON data URIs, including percent-encoded, `;utf8`, `;charset=utf-8`, and Base64 forms. Remote retrieval MUST follow client network policy. Invalid metadata prevents conforming discovery; unavailable resources, unsupported schemes, and RPC failures MUST be reported as resolution failures rather than proof of nonconformance. Successful discovery requires validated metadata and at least one query/action interface. Metadata alone is insufficient.
+
+Adapters SHOULD emit `ContractURIUpdated()` when metadata changes, as recommended by ERC-7572. Metadata is self-asserted descriptive data and MUST NOT be treated as instructions, authentication, or authorization.
 
 ### Application Queries Interface
 
@@ -43,7 +64,7 @@ Adapters exposing queries MUST implement this interface exactly:
 // SPDX-License-Identifier: CC0-1.0
 pragma solidity ^0.8.30;
 
-interface IApplicationQueries {
+interface IApplicationQueries is IERC7572 {
     function queries() external view returns (bytes32[] memory queryIds);
 
     function queryDescriptor(bytes32 queryId) external view returns (bytes memory descriptor);
@@ -71,7 +92,7 @@ struct PreparedAction {
     uint256 validUntil;
 }
 
-interface IApplicationActions {
+interface IApplicationActions is IERC7572 {
     function actions() external view returns (bytes32[] memory actionIds);
 
     function actionDescriptor(bytes32 actionId) external view returns (bytes memory descriptor);
@@ -146,9 +167,11 @@ Call order specifies relative order only. It MUST NOT be interpreted as requirin
 
 A client MUST NOT infer application-level success solely from the absence of an EVM revert. A target may report business failure through successful return data, and this proposal does not define return-value assertions, simulation requirements, or postconditions.
 
-Adapter discovery, adapter authenticity, and cross-chain execution plans are outside the scope of this proposal.
+Finding adapter addresses, establishing adapter authenticity, and cross-chain execution plans are outside the scope of this proposal. Self-description and capability discovery at a known chain and address are in scope.
 
 ### Interface Selectors
+
+The required ERC-7572 `contractURI()` selector and metadata interface ID are `0xe8a3d485`. The event does not contribute to the interface ID.
 
 The Application Queries function selectors are:
 
@@ -196,6 +219,10 @@ When snapshot consistency matters, clients SHOULD perform discovery, descriptor 
 
 Queries describe what an application knows, while actions describe what a user can do. Keeping them separate lets analytics adapters expose only reads, transaction builders expose only actions, and complete application adapters expose both. It also avoids forcing query-only clients to implement action structures or execution policy.
 
+### Required Self-Description
+
+ERC-7572 supplies a shared name and description independently of which capabilities an adapter exposes. Requiring it makes chain-and-address discovery sufficient for both identification and semantic invocation. Inline metadata avoids a separate document fetch; remote URIs permit richer documents. The repository's application metadata profile and client limits are specified in `spec/METADATA.md`.
+
 ### Adapter-Scoped Identifiers
 
 A global taxonomy would require agreement on names, versions, schemas, and semantics before applications could experiment. Adapter-scoped identifiers avoid premature coordination, at the cost of preventing clients from inferring semantic equivalence from identifier equality alone.
@@ -232,13 +259,21 @@ Queries and preparation sometimes require indexed or external data. Keeping cont
 
 This proposal does not require [ERC-165](./eip-165.md). Adapters that separately implement ERC-165 can advertise the selector XORs listed in the Specification as interface identifiers.
 
+Inherited selectors are excluded from Solidity interface IDs. The query/action selector XORs therefore retain their values; ERC-165 implementations can separately advertise `type(IERC7572).interfaceId` for metadata.
+
 ## Backwards Compatibility
 
 This proposal is additive and changes no existing contract, transaction, or client behavior. Existing contracts can implement either interface alongside other interfaces. Unsupported calls fail in the ordinary way.
 
 The ABIs are new and do not claim compatibility with earlier experimental variants. Implementers need to account for accidental function-selector collisions when adding them to existing contracts.
 
+This revision requires `contractURI()` and validated name/description metadata. Earlier experimental deployments without metadata are nonconforming and must be upgraded or redeployed to conform.
+
 ## Test Cases
+
+### Complete Discovery
+
+Given only a chain ID and adapter address, read `contractURI()`, resolve and validate its name and description, and discover queries, actions, or both. Cover inline UTF-8, percent-encoded, and Base64 JSON, malformed metadata, unavailable resources, additional properties, and query-only and action-only adapters. A contract exposing only metadata is not a conforming adapter.
 
 ### Query Round Trip
 
@@ -314,6 +349,10 @@ contract ExampleApplicationAdapter is IApplicationQueries, IApplicationActions {
     bytes32 internal constant SEND = keccak256("example.send");
 
     error UnknownCapability(bytes32 id);
+
+    function contractURI() external pure returns (string memory) {
+        return 'data:application/json;utf8,{"name":"Example Application","description":"Double an integer or prepare a native-token transfer."}';
+    }
 
     function queries() external pure returns (bytes32[] memory ids) {
         ids = new bytes32[](1);

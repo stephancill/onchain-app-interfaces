@@ -84,6 +84,10 @@ contract MoonwellApplicationAdapter is IApplicationQueries, IApplicationActions 
         apiBaseUrl = apiBaseUrl_;
     }
 
+    function contractURI() external pure returns (string memory) {
+        return 'data:application/json;utf8,{"name":"Moonwell Base USDC","description":"Read Moonwell positions and account health, inspect the current Base USDC market position, and prepare USDC supply with optional collateral enrollment.","external_link":"https://moonwell.fi"}';
+    }
+
     function queries() external pure returns (bytes32[] memory queryIds) {
         queryIds = new bytes32[](3);
         queryIds[0] = POSITIONS_QUERY;

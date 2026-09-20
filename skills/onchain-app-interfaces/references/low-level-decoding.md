@@ -14,7 +14,7 @@ const descriptorBytes = decodeFunctionResult({
 });
 ```
 
-The same rule applies to the outer `bytes` returned by `query`. Decode that function result first, then pass the resulting bytes to `decodeDescriptorResult`.
+The same rule applies to the `string` returned by `contractURI()` and the outer `bytes` returned by `query`. Decode the function result before interpreting the URI or passing query bytes to `decodeDescriptorResult`. Use `readContractMetadata` to decode the ABI string, resolve its URI, and validate the application metadata profile.
 
 ## PreparedAction
 

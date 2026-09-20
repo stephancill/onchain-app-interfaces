@@ -12,6 +12,8 @@ A descriptor lets a generic client encode semantic parameters, decode semantic q
 
 Both `queryDescriptor()` and `actionDescriptor()` return UTF-8 JSON bytes in this prototype.
 
+These descriptors describe individual capabilities. Application-level name and description are required through ERC-7572 `contractURI()` as specified in `spec/METADATA.md`; its document uses the ERC-7572 schema rather than this descriptor envelope.
+
 ## Envelope
 
 Every descriptor contains:

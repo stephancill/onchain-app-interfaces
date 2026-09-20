@@ -96,6 +96,10 @@ contract AerodromeApplicationAdapter is IApplicationQueries, IApplicationActions
     error InvalidAccount();
     error InvalidQuote();
 
+    function contractURI() external pure returns (string memory) {
+        return 'data:application/json;utf8,{"name":"Aerodrome WETH/USDC","description":"Inspect pool state and liquidity positions, quote swaps, and prepare swaps for the Aerodrome volatile WETH/USDC pool on Base.","external_link":"https://aerodrome.finance"}';
+    }
+
     function queries() external pure returns (bytes32[] memory queryIds) {
         queryIds = new bytes32[](3);
         queryIds[0] = POOL_STATE_QUERY;

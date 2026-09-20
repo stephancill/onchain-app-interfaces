@@ -108,6 +108,10 @@ contract RelayApplicationAdapter is IApplicationQueries, IApplicationActions {
 
     // --- Application Queries --------------------------------------------------
 
+    function contractURI() external pure returns (string memory) {
+        return 'data:application/json;utf8,{"name":"Relay","description":"Quote exact-input routes and prepare origin-chain EVM deposits for Relay bridges and swaps. Destination fulfillment is solver-mediated.","external_link":"https://relay.link"}';
+    }
+
     function queries() external pure returns (bytes32[] memory queryIds) {
         queryIds = new bytes32[](1);
         queryIds[0] = QUOTE_QUERY;

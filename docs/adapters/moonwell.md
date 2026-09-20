@@ -6,7 +6,17 @@ Experimental hybrid reference adapter for Moonwell's current USDC market on Base
 
 The implementation is `contracts/adapters/MoonwellApplicationAdapter.sol`.
 
+## Current Base Deployment
+
+- Chain ID: `8453`.
+- Adapter: [`0xd8e7a909318c36bc17a5eee6f2f8f44c848f29f3`](https://basescan.org/address/0xd8e7a909318c36bc17a5eee6f2f8f44c848f29f3#code).
+- Deployment transaction: `0xe7c69c09700f9694ba961b10249374792d002a6fac9db671d130cdfa399382ee` (block `51560999`, 2026-09-20).
+- Constructor API origin: `https://api.moonwell.fi`.
+- Runtime size: 10,695 bytes; required ERC-7572 metadata is inline.
+
 ## Purpose
+
+`contractURI()` returns inline ERC-7572 metadata named **Moonwell Base USDC**, describing the position, health, and USDC supply scope. This source implements `spec/METADATA.md`; earlier deployments need replacement to expose it.
 
 This adapter demonstrates one application interface combining:
 

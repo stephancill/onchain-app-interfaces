@@ -345,6 +345,10 @@ contract AvantisApplicationAdapter is IApplicationQueries, IApplicationActions {
         descriptors = new AvantisApplicationDescriptors();
     }
 
+    function contractURI() external pure returns (string memory) {
+        return 'data:application/json;utf8,{"name":"Avantis Base","description":"Discover Avantis v2 markets and positions on Base and prepare perpetual trades, pending-order changes, position increases, margin changes, and trading delegation.","external_link":"https://avantisfi.com"}';
+    }
+
     function queries() external pure returns (bytes32[] memory queryIds) {
         queryIds = new bytes32[](5);
         queryIds[0] = META_QUERY;

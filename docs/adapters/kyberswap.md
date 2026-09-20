@@ -6,6 +6,8 @@ Experimental Base-only exact-input swap adapter implemented in `contracts/adapte
 
 ## Capability
 
+`contractURI()` returns inline ERC-7572 metadata named **KyberSwap Base WETH/USDC**, describing this exact-input swap preparation scope. It implements the required profile in `spec/METADATA.md`.
+
 The adapter exposes `kyberswap.swap.exactInput` for ERC-20 WETH/USDC swaps. Parameters include exact input, an explicit user minimum output, slippage basis points, and a deadline.
 
 Preparation performs two recursive External Requests:

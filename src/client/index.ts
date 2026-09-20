@@ -11,6 +11,20 @@ export {
 } from "./request.ts";
 export { resolveCall } from "./resolve.ts";
 export { stringifyJson } from "./json.ts";
+export {
+  contractMetadataAbi,
+  contractMetadataSchema,
+  maxMetadataBytes,
+  maxMetadataUriBytes,
+  parseContractMetadata,
+  readContractMetadata,
+  resolveContractMetadata,
+} from "./metadata.ts";
+export type {
+  ContractMetadata,
+  MetadataResolutionOptions,
+  ResolvedContractMetadata,
+} from "./metadata.ts";
 export { transformHttpResponse } from "./transform.ts";
 export type { ResponseBodyEncoding } from "./transform.ts";
 export {

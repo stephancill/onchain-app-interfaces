@@ -4,7 +4,17 @@
 
 Experimental hybrid query/action adapter implemented in `contracts/adapters/RelayApplicationAdapter.sol`. It is not pinned to a single origin chain; every request carries `originChainId`/`destinationChainId`, so the same adapter can quote and prepare EVM deposits on any Relay-supported origin chain.
 
+## Current Base Deployment
+
+- Chain ID: `8453`.
+- Adapter: [`0x4ab46c803b53ef51e9813c512de7ccef6214ea92`](https://basescan.org/address/0x4ab46c803b53ef51e9813c512de7ccef6214ea92#code).
+- Deployment transaction: `0xa9b91fb4f89c14d2166a5cc558cf85c3062e72c6751ce7d26c5a8f45b115bd89` (block `51561008`, 2026-09-20).
+- Constructor API origin: `https://api.relay.link`.
+- Runtime size: 13,149 bytes; required ERC-7572 metadata is inline.
+
 ## Capabilities
+
+`contractURI()` returns inline ERC-7572 metadata named **Relay**, describing route quotes and origin-chain deposits with solver-mediated destination fulfillment. It implements `spec/METADATA.md`; earlier deployments need replacement to expose it.
 
 - `relay.route.quote` — an indicative EXACT_INPUT preview. It POSTs `/quote/v2` with `indicativeQuote: true` and returns the raw response body bound to the requested chain pair and amount.
 - `relay.bridge.exactInput` — POSTs an executable `/quote/v2` and reduces the returned origin-chain EVM steps (`approve` → `deposit`/`swap`) into an ordered `PreparedAction` bundle.

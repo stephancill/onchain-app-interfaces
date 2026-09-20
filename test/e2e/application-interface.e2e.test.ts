@@ -20,7 +20,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
 import { z } from "zod";
 
-import { resolveCall } from "../../src/client/index.ts";
+import { readContractMetadata, resolveCall } from "../../src/client/index.ts";
 import type {
   AuthorizeRequest,
   HttpFetch,
@@ -336,6 +336,19 @@ afterAll(async () => {
 });
 
 describe("application interface end-to-end", () => {
+  test("reads fixture self-description from a deployed contract", async () => {
+    const client = createPublicClient({
+      chain: foundry,
+      transport: http(rpcUrl),
+    });
+    const result = await readContractMetadata({
+      address: adapterAddress,
+      ethCall: async (call) => (await client.call(call)).data ?? "0x",
+    });
+    expect(result.metadata.name).toBe("Application Fixture");
+    expect(result.metadata.description).toContain("local test chain");
+  });
+
   test("resolves an onchain semantic query without HTTP", async () => {
     const result = await resolveAdapterCall({
       data: queryCall(

@@ -1,4 +1,4 @@
-# Application Queries v0
+# Application Queries v0.1
 
 ## Status
 
@@ -16,7 +16,7 @@ Queries describe what an application knows. Application Actions separately descr
 
 The experimental interface is defined by `contracts/IApplicationQueries.sol`.
 
-Application Queries and Application Actions are separate optional capabilities. An application adapter MAY implement either or both.
+Application Queries and Application Actions are individually optional capabilities. An application adapter MUST implement either or both and MUST expose ERC-7572 metadata as specified in `spec/METADATA.md`. Both Solidity interfaces inherit `IERC7572`.
 
 ## Query Discovery
 
@@ -57,4 +57,4 @@ Query callbacks MUST validate external responses according to application requir
 - Canonical query identifiers.
 - Sensitive-result metadata and handling.
 - Query caching and common freshness semantics.
-- Application-adapter discovery and authenticity.
+- Finding application-adapter addresses and establishing authenticity.

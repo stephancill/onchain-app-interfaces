@@ -6,6 +6,8 @@ Experimental authenticated Base adapter implemented in `contracts/adapters/OpenS
 
 ## Capabilities
 
+`contractURI()` returns inline ERC-7572 metadata named **OpenSea Base**, describing authenticated collection statistics and public SeaDrop mint preparation. It implements the required profile in `spec/METADATA.md`.
+
 - `opensea.collection.stats` returns API JSON bound to a validated collection slug.
 - `opensea.drop.mint.public` prepares one canonical public SeaDrop mint.
 

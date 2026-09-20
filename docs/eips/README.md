@@ -5,7 +5,7 @@ This directory contains pre-number drafts prepared from the active ERC template 
 The guidance review used `ethereum/EIPs` at `ac450a4ab2f37387385ee9c54b62f518d97e6cc9` and `ethereum/ercs` at `53b6c669c3cb49709c552c87a86db36697f15d63`. Both clones are retained under ignored `third-party/` paths for reference.
 
 - `erc-draft-external-request.md` defines client-mediated HTTP continuations.
-- `erc-draft-application-interfaces.md` defines the separate optional Application Queries and Application Actions interfaces.
+- `erc-draft-application-interfaces.md` defines required ERC-7572 application self-description plus the individually optional Application Queries and Application Actions interfaces. Every adapter implements queries, actions, or both.
 
 These documents are working papers, not published ERCs. Before either is submitted:
 
